@@ -24,11 +24,10 @@
  *
  * Only the owner's events change it (`isMine`), but for a give to the owner, which another
  * player's reply announces, and a fight of one of their Pakkomon (`pakkomon.ts`). A drop whose item
- * is a guess (`sure: false`) is counted under its guess and kept pending: when a later event
- * teaches its item (a listing that names an item that ends it, or a sure drop of its sentence),
- * the count moves to the item (`pending.ts`). A whole inventory (the `/esporta` file, or a complete
- * listing with no filter) settles every drop still pending: it counts them, as whatever they were,
- * so none is resolved again after it.
+ * is a guess (`sure: false`) is counted under its guess. Resolving it is its reader's, which knows
+ * what it has read since: it tells the real item in a `resolved` event, and the state moves the
+ * count from the guess to the item (`resolved.ts`, since 0.2.0). The state records the owner's
+ * history; it learns no item names of its own to correct its past with.
  *
  * `apply` changes the state in place, for a reader that folds a whole history; `reduce` is the same
  * on a copy, pure, for one that keeps each state (MegaBotTron1999's state plugins). Pure logic only.
@@ -36,11 +35,14 @@
 import { type ItemLine, shapeGiven } from '@inventorybottron/grammar';
 import { type Facts, factsOf, Holdings } from './holdings.ts';
 import { applyPakkomon } from './pakkomon.ts';
-import { learnFrom, MAX_LATEST, MAX_PENDING } from './pending.ts';
 import { ensure, own } from './records.ts';
-import { inventoryScope, isFailedUse, isMine, isWholeInventory } from './rules.ts';
+import { applyResolved } from './resolved.ts';
+import { inventoryScope, isFailedUse, isMine } from './rules.ts';
 import { seen, shaped } from './seen.ts';
 import { type HoldingVia, type Know, type State, type StateEvent } from './types.ts';
+
+/** At most this many of the latest drops kept. */
+export const MAX_LATEST = 10;
 
 /** The state of an owner who has done nothing yet; `player`, their username, if known. */
 export function initialState(player: string | null = null): State {
@@ -54,7 +56,7 @@ export function initialState(player: string | null = null): State {
     locations: {},
     pakkomon: {},
     shapes: {},
-    drops: { pending: [], latest: [] },
+    drops: { latest: [] },
   };
 }
 
@@ -113,12 +115,7 @@ export function apply(s: State, e: StateEvent, know: Know = {}): void {
   const hold = new Holdings(s.inventory);
   applyHoldings(s, e, k, hold);
   applyPakkomon(s, e);
-  learnFrom(s, e, hold);
-  const mine = isMine(e, s.owner.player);
-  // A whole inventory counts every drop before it, so a guess it left pending is settled: its
-  // resolution later would add its item again on top of the listing's count.
-  if (mine && isWholeInventory(e)) s.drops.pending = [];
-  if (mine) s.owner.as_of = e.date ?? null;
+  if (isMine(e, s.owner.player)) s.owner.as_of = e.date ?? null;
 }
 
 /** The via of an inventory listing: the command that listed it, `/inventario` when not known. */
@@ -221,10 +218,8 @@ function applyHoldings(s: State, e: StateEvent, know: Required<Know>, hold: Hold
     }
     s.drops.latest.push({ item: e.resolved, ...facts, date: d, sure });
     s.drops.latest.splice(0, s.drops.latest.length - MAX_LATEST);
-    if (!sure && e.kind === 'adventure') {
-      s.drops.pending.push({ raw: e.raw, guess: e.resolved, ...facts, date: d });
-      s.drops.pending.splice(0, s.drops.pending.length - MAX_PENDING);
-    }
+  } else if (e.type === 'resolved') {
+    applyResolved(s, e, hold);
   } else if (e.type === 'gift') {
     seen(s, e.item, d);
     hold.delta(e.item, e.qty, d);

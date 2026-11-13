@@ -60,9 +60,13 @@ describe('the inventorybot-state node', () => {
       rarity: 'R',
       tags: ['usabile'],
     });
-    expect(run.read('get', { path: 'drops.pending' })).toMatchObject([
-      { raw: `${S2}${STECCO}`, guess: 'un ghiacciolo', rarity: 'N' },
-    ]);
+    // The guess is the parser's to resolve: the state keeps no pending drops.
+    expect(run.read('get', { path: 'drops' })).toEqual({
+      latest: [
+        expect.objectContaining({ item: 'un sasso', sure: true }),
+        expect.objectContaining({ item: 'un ghiacciolo', sure: false }),
+      ],
+    });
     expect(run.read('get', { path: 'owner.player' })).toBe(OWNER);
     expect(run.read('freshness', { section: 'inventory' })).toEqual({
       snapshot: { t: T0, event: 'inventorybot.inventory' },
@@ -76,7 +80,8 @@ describe('the inventorybot-state node', () => {
       ['owner', 'inventory', 'drops'],
       ['owner', 'inventory', 'drops'],
     ]);
-    // A whole listing is a snapshot, its deltas from zero again; it teaches the guessed item too.
+    // A whole listing is a snapshot, its deltas from zero again; it teaches the parser the guessed
+    // item too, which tells it first.
     run.clock.advance(MIN);
     await run.owner('/i');
     await run.bot(
@@ -88,26 +93,43 @@ describe('the inventorybot-state node', () => {
       uncertain: 0,
     });
     expect(held(run)).toEqual({ 'un sasso': 3, 'una perla': 1, [STECCO]: 1 });
-    expect(run.read('get', { path: 'drops.pending' })).toEqual([]);
+    expect(run.of('inventorybot.resolved').map((r) => [r['guess'], r['item'], r.t])).toEqual([
+      ['un ghiacciolo', STECCO, T0 + 3 * MIN],
+    ]);
     await run.core.stop();
   });
 
-  it('resolves a pending drop once a later event teaches its item', async () => {
+  it('moves a guess the parser resolves to its item, and tells no gain of it', async () => {
     const run = await bootState(dir);
     await run.owner('/inventario');
     await run.bot(`@${OWNER}, possiedi:\n- un sasso [C] x1`);
-    await run.bot(`@${OWNER}, ${S2}${STECCO} [N]!`);
+    await run.bot(`@${OWNER}, ${S2}${STECCO} [N] [usabile]!`);
     expect(held(run)).toEqual({ 'un sasso': 1, 'un ghiacciolo': 1 });
-    // A sure drop of the same sentence teaches it: the guess moves to its item, in the reducer.
+    // A sure drop of the sentence teaches it: the parser resolves the guess, after the drop's turn.
     run.clock.advance(20 * MIN);
     await run.bot(`@${OWNER}, ${S2}un sasso [C]!`);
     expect(held(run)).toEqual({ 'un sasso': 2, [STECCO]: 1 });
-    expect(run.read('get', { path: 'drops.pending' })).toEqual([]);
-    // Announced with the event that resolved it, as every live change is.
+    expect(run.of('inventorybot.resolved')).toMatchObject([
+      {
+        t: T0 + 20 * MIN,
+        chat: DM,
+        guess: 'un ghiacciolo',
+        item: STECCO,
+        raw: `${S2}${STECCO}`,
+        rarity: 'N',
+        tags: ['usabile'],
+        date: T0,
+      },
+    ]);
+    // Applied as a change of the state; told as nothing else: no gain, no event of its own.
     expect(run.of('inventorybot-state.changed').at(-1)).toMatchObject({
-      sections: ['owner', 'inventory', 'items', 'drops'],
-      event: { type: 'inventorybot.turn', t: T0 + 20 * MIN },
+      sections: ['inventory', 'items', 'drops'],
+      event: { type: 'inventorybot.resolved', t: T0 + 20 * MIN },
     });
+    expect(run.of('inventorybot-state.gained').map((g) => [g['item'], g['sure']])).toEqual([
+      ['un ghiacciolo', false],
+      ['un sasso', true],
+    ]);
     expect(run.read('get', { path: 'drops.latest' })).toMatchObject([
       { item: STECCO, sure: true },
       { item: 'un sasso', sure: true },
@@ -115,7 +137,48 @@ describe('the inventorybot-state node', () => {
     expect(run.read('get', { path: `items.${STECCO}` })).toEqual({
       first_seen: '2026-11-06T12:00:00+00:00',
     });
+    expect(run.read('get', { path: `inventory.items.${STECCO}` })).toMatchObject({
+      rarity: 'N',
+      tags: ['usabile'],
+    });
     await run.core.stop();
+  });
+
+  it('never resolves a guess after a whole inventory, which counted it (issue #1)', async () => {
+    const run = await bootState(dir);
+    await run.bot(`@${OWNER}, ${S2}${STECCO} [N]!`);
+    // By the export the item is gone: it lists neither it nor the guess.
+    run.clock.advance(MIN);
+    await run.owner('/esporta');
+    await run.bot(`Inventario di @${OWNER}, al 2026/11/06 12:01:00`, {
+      document: { name: 'file.txt', mime: 'text/plain', size: 20, text: '2x\tun sasso\t[C]\r\n' },
+    });
+    expect(held(run)).toEqual({ 'un sasso': 2 });
+    // A gift of the item, then a sure drop of the sentence: the drop is not counted again.
+    run.clock.advance(MIN);
+    await run.bot(`[N] @lucia_b ti ha dato 1x ${STECCO}`);
+    await run.bot(`@${OWNER}, ${S2}un sasso [C]!`);
+    expect(held(run)).toEqual({ 'un sasso': 3, [STECCO]: 1 });
+    expect(run.of('inventorybot.resolved')).toEqual([]);
+    await run.core.stop();
+  });
+
+  it('takes the pending drops out of a state kept before 0.7.0', async () => {
+    const first = await bootState(dir);
+    await first.bot(`@${OWNER}, ${S}un sasso [C]!`);
+    await first.core.stop();
+    const file = path.join(dir, 'data', 'instances', 'inventorybot-state', 'state.json');
+    const kept = JSON.parse(fs.readFileSync(file, 'utf8'));
+    kept.state.drops.pending = [{ raw: 'x', guess: 'x', rarity: 'C', tags: [], date: null }];
+    fs.writeFileSync(file, JSON.stringify(kept));
+    fs.rmSync(path.join(dir, 'data', 'instances', 'inventorybot-state', '_meta.json'), {
+      force: true,
+    });
+    const second = await bootState(dir, { at: T0 + MIN });
+    expect(second.read('get', { path: 'drops' })).toEqual({
+      latest: [expect.objectContaining({ item: 'un sasso' })],
+    });
+    await second.core.stop();
   });
 
   it('tells each item gained live, and nothing of history', async () => {

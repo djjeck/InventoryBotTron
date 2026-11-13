@@ -55,6 +55,7 @@ describe('the reducer', () => {
         exported: true,
       }),
     ]);
+    // The guess is zeroed by the file, its item counted by it.
     expect(qty(s)).toStrictEqual({
       'un sasso': 0,
       'una perla': 5,
@@ -66,9 +67,8 @@ describe('the reducer', () => {
       true
     );
     expect(s.inventory.held).toBe(2);
-    // The guess resolved by the file's name, its count not moved again on top of the file's.
-    expect(s.drops.pending).toStrictEqual([]);
-    expect(s.drops.latest.map((g) => [g.item, g.sure])).toStrictEqual([['un dado di legno', true]]);
+    // The state resolves no guess of its own: the drop stays named by its guess.
+    expect(s.drops.latest.map((g) => [g.item, g.sure])).toStrictEqual([['dado di legno', false]]);
   });
 
   it('filters_zero_only_their_scope', () => {

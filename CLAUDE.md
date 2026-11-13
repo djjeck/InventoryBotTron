@@ -141,28 +141,35 @@ a whole export with it, and for the `inventorybot` module's state plugin, which 
 entry, `src/index.ts`, is its contract:
 
 - `initialState(player?)`, `apply(state, event, know?)` (in place) and `reduce(state, event, know?)`
-  (pure, a copy): the reducer (`reduce.ts`, `holdings.ts`, `pakkomon.ts`, `pending.ts`, `seen.ts`).
+  (pure, a copy): the reducer (`reduce.ts`, `holdings.ts`, `pakkomon.ts`, `resolved.ts`, `seen.ts`).
   Its events (`StateEvent`, `types.ts`) are the grammar's, with the reply's context (`date`, ISO
   with its offset; `player`, `dm`, `forwarded`, `broadcast`; `query`, the command it answers) and
   what their reader resolved: a drop's item (`resolved`, with `sure: false` for a guess, and its
   place, `location`), a craft's `recipe`, a use's `used_item`, and a give to the owner `notified` by
-  its private notice. What depends on the game beyond one reply is the reader's `Know` (an item's
-  rarity, a recipe's ingredients, whether a use consumes the item, every item known); the state
-  stands in with its own when the reader gives none.
+  its private notice; and, besides the grammar's, the reader's correction of one of the owner's
+  guessed drops (`resolved`, `ResolvedEvent`: `guess`, `item`, `dropped`, `rarity`, `usable`; since
+  0.2.0). What depends on the game beyond one reply is the reader's `Know` (an item's rarity, a
+  recipe's ingredients, whether a use consumes the item, every item known); the state stands in with
+  its own when the reader gives none.
 - `State`, its sections: `owner` (`player`, `as_of`), `inventory` (`held`, the items above zero, and
   `items`, each estimated item's `qty`, `exact`, `date`, `via`, `rarity` and `tags`), `items` (first
   seen, used), `recipes` (made), `recipe_list`, `inventory_check` (the `/ricetta` lists against the
   estimate), `locations` (visited, adventures), `pakkomon`, `shapes`, and `drops`: the latest drops,
-  and those whose item is a guess, kept pending with their narrative until an event teaches the item
-  (a listing that names an item that ends it, or a sure drop of its sentence), when the count moves
-  from the guess to the item inside the reducer (`pending.ts`); a whole inventory (the `/esporta`
-  file, or a complete listing with no filter) settles every drop still pending, since it counts
-  them, so that none is counted again when a later event would have resolved it (since 0.1.1).
+  a guess among them `sure: false`.
+- **The state records; its reader resolves** (since 0.2.0). A drop whose item is a guess is counted
+  under its guess. The state learns no item names of its own to correct its past with: its reader,
+  which reads every message (the `inventorybot` parser), resolves the guess once it learns the item
+  and tells it in a `resolved` event, and the state moves the count from the guess to the item
+  (`resolved.ts`), only while the guess is still counted (a listing since, a whole inventory above
+  all, has counted the drop already: issue #1). A reader tells a resolution before the reply that
+  taught it, so that a listing naming the item counts it after the move. Until 0.2.0 the state kept
+  the guesses pending (`drops.pending`, `MAX_PENDING`, `taughtItems`) and resolved them itself.
 - `playerView(state, places?)`: the state as the wiki shows it (`PlayerView`), a shaped item and
   every Pakkomon merged, holdings above zero, sorted.
 - The rules the wiki's phase 5 shares with it: `isMine`, `queryArg`, `inventoryScope`,
-  `RARITY_FILTER`, `isFailedUse` (`USE_FAILED`), `nameKey`, `pakkomonOf`, `renamed`, `sameTransfer`
-  (`TRANSFER_WINDOW`), and the dates (`instant`, `isoPlusSeconds`, `isoOf`).
+  `isWholeInventory` (since 0.2.0), `RARITY_FILTER`, `isFailedUse` (`USE_FAILED`), `nameKey`,
+  `pakkomonOf`, `renamed`, `sameTransfer` (`TRANSFER_WINDOW`), and the dates (`instant`,
+  `isoPlusSeconds`, `isoOf`).
 
 Every record is read and written by its own properties (`records.ts`), so that an item may be named
 anything, `__proto__` included. The wiki vendors it as it does the grammar (its workspace
@@ -173,7 +180,7 @@ of its player state are this package's.
 
 `modules/inventorybot/`, the workspace package `@inventorybottron/inventorybot` and the module
 `inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0` and
-`@inventorybottron/state` `^0.1.1`), whose plugin entry `src/plugins/inventorybot.ts` offers the
+`@inventorybottron/state` `^0.2.0`), whose plugin entry `src/plugins/inventorybot.ts` offers the
 `inventorybot` parser: InventoryBot's answers to the owner's turns, on MegaBotTron1999's turn parser
 (its `docs/bot-os-api.md` §5), published as `inventorybot.turn` (`{ chat, outcome }`, the outcome's
 shape in `src/turn.ts`), with the contract `state.rest` and `actions.sent` a turn-actor binds to. It
@@ -202,24 +209,38 @@ leaves the caption alone, which tells nothing, and is logged with why. The modul
 catalogue of the bot's replies that refuse a command (their reason, and whether the grammar
 recognises each), for MegaBotTron1999's coming command answers (its issue #59).
 
+- **The parser resolves the owner's guesses** (since 0.7.0, `src/knowledge.ts`, `src/resolved.ts`):
+  it keeps the owner's drops whose item it guessed (at most 50, in its `knowledge` document), and
+  whenever any message it reads (any player's, in any chat it reads, played back or live) or a seed
+  teaches it an item or a sentence that resolves one, publishes `inventorybot.resolved`
+  (`{ chat, guess, item, raw, rarity, tags, date, playback? }`, `date` the drop's time in ms, `chat`
+  its chat), before the reply that taught it. A whole inventory of the owner's (the `/esporta` file,
+  or a complete unfiltered listing: the state's `isWholeInventory`) forgets the guesses before it
+  unresolved, since it counted them (issue #1).
 - **The `inventorybot-state` plugin** (`src/plugins/inventorybot-state.ts`, its own plugin entry,
   since 0.3.0): the owner's player state, MegaBotTron1999's `statePlugin` (its docs/bot-os-api.md
   §5, bot-os.md D72) over the state package's `reduce`. `src/state.ts` reads the parser's events as
-  the state's: a turn's gain as a drop (a guess, `sure: false`, kept pending with its `raw`), a
-  reply as the owner's event, a `/usa`'s item and a craft's recipe found by the words of the
-  command's argument among the items held or seen and the recipes listed or made (its `events` input
-  stays bound to the parser's namespace, so the per-kind events reach it on the same edge); its zod
-  schema (`stateSchema`, the package's `State`); and the freshness: a whole listing a `snapshot` of
-  `inventory`, a guess `uncertain`, any other change a `delta`. Its interface adds `count` and
-  `held`; its config's `pin` defaults to `inventory.held` and `drops.latest`. It announces each
-  change as `inventorybot-state.changed` (the sections changed, `statePlugin`'s), and, since 0.5.0,
-  what happened in its own event, `inventorybot-state.gained` (below).
+  the state's: a turn's gain as a drop (a guess, `sure: false`, counted under its guess), the
+  parser's `inventorybot.resolved` as the state's `resolved` (since 0.7.0), a reply as the owner's
+  event, a `/usa`'s item and a craft's recipe found by the words of the command's argument among the
+  items held or seen and the recipes listed or made (its `events` input stays bound to the parser's
+  namespace, so the per-kind events reach it on the same edge); its zod schema (`stateSchema`, the
+  package's `State`); and the freshness: a whole listing a `snapshot` of `inventory`, a guess
+  `uncertain`, any other change a `delta`. Its interface adds `count` and `held`; its config's `pin`
+  defaults to `inventory.held` and `drops.latest`. Its store's first migration (0.7.0) takes
+  `drops.pending` out of a state kept before. It announces each change as
+  `inventorybot-state.changed` (the sections changed, `statePlugin`'s), and, since 0.5.0, what
+  happened in its own event, `inventorybot-state.gained` (below).
 - **State plugins offer rich domain events.** A state tells what an event did in the game's own
   terms (an item gained), not only which sections changed, so that the owner writes a small script
   on the fly ("when I find X, …") on its events instead of comparing states. Each is declared in the
   spec (`events`, `<id>.<name>` in the manifest) and made by a pure function of the state before and
   after and the event (`announce`), told live only: never for an event refused, read at start from
   the log, or played back (MegaBotTron1999's D83). A new event of the kind is a minor version.
+- **State events announce new facts, never corrections of past facts.** A correction (a guess
+  resolved) flows from the parser to the state only: the state applies it (and `changed` tells the
+  sections it changed, as for any event), but tells it in no event of its own, neither a `gained`
+  nor a `resolved`. A script that needs corrections listens to the parser's `inventorybot.resolved`.
 - **`inventorybot-state.gained`** (`src/gains.ts`, `gains(before, after, event)`):
   `{ item: string, sure: boolean, qty: number, exact: boolean }`, one per item the owner gained by
   an event, `qty` and `exact` the item's holding after it (`after.inventory.items[item]`; 0 and
@@ -229,16 +250,19 @@ recognises each), for MegaBotTron1999's coming command answers (its issue #59).
   comes as the notice, a gift); a craft's output; each item a `/usa` adds (a positive count among
   its items). **Not a gain:** a listing, an `/esamina`, a `/mostra`, a `/ricetta`, a `/dai` refused
   with the count owned (observations, even when they raise an estimate), the lottery, a Pakkomon
-  fight. A guess resolved later moves the count to its item, and is told no second time.
+  fight, nor a guess the parser resolves later (`inventorybot.resolved`): it moves the count to its
+  item, and is told no second time.
 - `src/read.ts` reads a message with the grammar: whose reply it is, a gain or a cooldown, and what
   it teaches; `src/knowledge.ts` is what the instance knows, kept in its store's `knowledge`
-  document (at most 5000 items, 1000 prefixes and the latest 200 unknown drops); `src/drop-cut.ts`
-  guesses where an unknown drop's item begins from an earlier one of its sentence.
-- **It knows only what it reads** ("Game content", below): the items an inventory, a recipe, a
-  craft, a `/mostra` or the lucky adventure lists; a drop's sentence once it ends with a known item,
-  and a drop's item once its sentence is known, both `sure`. Any other drop is a guess,
-  `sure: false`, from which nothing is learned: cut at an article where it parts from an earlier
-  unknown drop, else after its last indefinite article (the grammar's `guessDropItem`).
+  document (at most 5000 items, 1000 prefixes, the latest 200 unknown drops and 50 of the owner's
+  guesses); `src/drop-cut.ts` guesses where an unknown drop's item begins from an earlier one of its
+  sentence.
+- **It knows only what it reads** ("Game content", below): the items an inventory, a recipe, a craft
+  (its ingredients and output), a `/mostra`, a `/usa`, a gift or a give, or the lucky adventure
+  lists; a drop's sentence once it ends with a known item, and a drop's item once its sentence is
+  known, both `sure`. Any other drop is a guess, `sure: false`, from which nothing is learned: cut
+  at an article where it parts from an earlier unknown drop, else after its last indefinite article
+  (the grammar's `guessDropItem`).
 - **Seeding:** its action `seed` merges `{ items, prefixes }` into what it knows. The owner makes
   one from their own exports with `scripts/seed-knowledge.ts` (the root's, not the module's: it
   reads files), which reads every message of the bot in a Telegram Desktop HTML export

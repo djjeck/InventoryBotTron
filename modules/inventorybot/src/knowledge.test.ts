@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type Guess,
   InventoryKnowledge,
   KNOWLEDGE_DOC,
   type KnowledgeStore,
+  MAX_GUESSES,
   MAX_ITEMS,
   MAX_PREFIXES,
   MAX_UNKNOWN,
@@ -53,6 +55,7 @@ describe('InventoryKnowledge', () => {
       items: ['un barattolo di miele', 'un sasso', "una ghianda d'oro"],
       prefixes: prefixForms(A),
       unknown: [],
+      guesses: [],
     });
     // Nothing new: nothing written.
     const writes = store.writes;
@@ -118,6 +121,59 @@ describe('InventoryKnowledge', () => {
     expect(k.prefixes.size).toBe(MAX_PREFIXES);
     for (let i = 0; i < MAX_UNKNOWN + 2; i++) k.resolve(`nel fienile numero ${i} trovi una spada`);
     expect(k.unknown.size).toBe(MAX_UNKNOWN);
+  });
+});
+
+describe("the owner's guesses", () => {
+  const guess = (raw: string, t: number): Guess => ({
+    raw,
+    guess: 'una corda',
+    rarity: 'C',
+    tags: [],
+    chat: '@InventoryBot',
+    t,
+  });
+
+  it('are settled by what is learned since, kept across a restart, and forgotten by time', () => {
+    const store = memory();
+    const k = new InventoryKnowledge(store);
+    k.guessed(guess(`${A}una corda di canapa`, 1));
+    k.guessed(guess(`${B}una corda di canapa`, 2));
+    k.guessed(guess(`${B}una spada di legno`, 3));
+    // Nothing learned: nothing settled.
+    expect(k.settle()).toEqual([]);
+    k.learnItems(['un sasso']);
+    expect(k.settle()).toEqual([]);
+    // An item that ends a narrative settles every guess it resolves, and teaches its sentence,
+    // which settles another in turn.
+    k.learnItems(['una corda di canapa']);
+    expect(k.settle().map((r) => [r.t, r.item])).toEqual([
+      [1, 'una corda di canapa'],
+      [2, 'una corda di canapa'],
+      [3, 'una spada di legno'],
+    ]);
+    expect(k.prefixes.has(A)).toBe(true);
+    // Kept in the store: a restart knows those left, which what it learns next resolves.
+    k.guessed(guess('nel fienile trovi una perla', 4));
+    const again = new InventoryKnowledge(store);
+    expect(again.guesses.map((g) => g.t)).toEqual([4]);
+    expect(again.settle()).toEqual([]);
+    again.learnItems(['una perla']);
+    expect(again.settle().map((r) => r.item)).toEqual(['una perla']);
+    // Forgotten at or before a time, unresolved.
+    again.guessed(guess(`${A}x`, 4));
+    again.guessed(guess(`${A}y`, 6));
+    again.forget(3);
+    expect(again.guesses.map((g) => g.t)).toEqual([4, 6]);
+    again.forget(5);
+    expect(again.guesses.map((g) => g.t)).toEqual([6]);
+  });
+
+  it('keeps at most its bound, the oldest dropped first', () => {
+    const k = new InventoryKnowledge(memory());
+    for (let t = 0; t < MAX_GUESSES + 2; t++) k.guessed(guess(`${A}x`, t));
+    expect(k.guesses).toHaveLength(MAX_GUESSES);
+    expect(k.guesses[0]?.t).toBe(2);
   });
 });
 

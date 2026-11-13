@@ -131,10 +131,25 @@ describe('what the owner gained', () => {
     expect(gains(s, guessed, first).map((g) => g.payload)).toEqual([
       { item: 'legno', sure: false, qty: 1, exact: false },
     ]);
-    // A gift of the real item resolves it: the gift is told, the drop not again.
+    // The parser's correction moves the count, and is no gain: a correction, not a new fact.
+    const fix = {
+      type: 'inventorybot.resolved',
+      t: T0 + 60_000,
+      chat: '@InventoryBot',
+      guess: 'legno',
+      item: 'un dado di legno',
+      raw,
+      rarity: 'C',
+      tags: [],
+      date: T0,
+    } as BusEvent;
+    const resolved = reduce(guessed, toStateEvent(guessed, fix) as StateEvent);
+    expect(resolved.inventory.items['un dado di legno']?.qty).toBe(1);
+    expect(gains(guessed, resolved, fix)).toEqual([]);
+    // A gift of the real item after it is told, with the drop in its count.
     const gift = reply({ type: 'gift', from: 'lucia_b', qty: 1, item: 'un dado di legno' });
-    const resolved = reduce(guessed, toStateEvent(guessed, gift) as StateEvent);
-    expect(gains(guessed, resolved, gift).map((g) => g.payload)).toEqual([
+    const after = reduce(resolved, toStateEvent(resolved, gift) as StateEvent);
+    expect(gains(resolved, after, gift).map((g) => g.payload)).toEqual([
       { item: 'un dado di legno', sure: true, qty: 2, exact: false },
     ]);
   });

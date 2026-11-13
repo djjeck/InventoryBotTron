@@ -61,8 +61,10 @@ drop and reply the parser has published. The inventory is exact after a whole `/
 `/collezioni`) in the private chat, or an `/esporta`, whose file the parser reads live, and each
 section's freshness says how far it is from its last whole listing: a drop or a use is a change
 known exactly, a drop whose item the parser guessed an uncertain one, counted under its guess until
-a later reply teaches the item. Other nodes read it through its interface: `state.get({ path })`,
-`state.freshness({ section })`, `state.count({ name })` and `state.held()`.
+the parser learns the item (from any message it reads, any player's) and tells it as
+`inventorybot.resolved`, when the state moves the count to the item. Other nodes read it through its
+interface: `state.get({ path })`, `state.freshness({ section })`, `state.count({ name })` and
+`state.held()`.
 
 It also tells what happened, so that a small script reacts to the game without comparing states:
 `inventorybot-state.gained`, `{ item, sure, qty, exact }`, one per item the owner gains (an
@@ -70,10 +72,12 @@ adventure drop, sure or guessed, the lucky adventure's prize, a gift, a craft's 
 `/usa` gives), with how many of it they hold after and whether that count is exact; for a drop whose
 item the parser guessed, `sure` is false and `item` is the guess. A listing, an `/esamina`, a
 `/mostra`, a `/ricetta` or a `/dai` only observes the inventory and gains nothing, and neither does
-the lottery or a Pakkomon fight; a guess resolved later is not told again. It is news only: nothing
-is told of what the node catches up on at start, nor of a message the account caught up on after
-downtime. Bind a script node's events input to the `inventorybot-state` node's events output (the
-namespace `inventorybot-state`) and react to `inventorybot-state.gained`.
+the lottery or a Pakkomon fight. The state's events announce new facts, never corrections of past
+ones: a guess the parser resolves later is not told again by the state (a script that needs it
+listens to the parser's `inventorybot.resolved`). It is news only: nothing is told of what the node
+catches up on at start, nor of a message the account caught up on after downtime. Bind a script
+node's events input to the `inventorybot-state` node's events output (the namespace
+`inventorybot-state`) and react to `inventorybot-state.gained`.
 
 ## Seeding the parser
 

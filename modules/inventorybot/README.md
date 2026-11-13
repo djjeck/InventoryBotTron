@@ -26,6 +26,18 @@ private chat or a group the edge reads. Its `outcome` is the shape every game bo
 The drops and the adventure's cooldown are the turns' alone: no other event of the parser repeats
 them.
 
+### Corrections: `inventorybot.resolved`
+
+`{ chat, guess, item, raw, rarity, tags, date, playback? }`: one of the owner's drops whose item the
+parser guessed (a turn's `gain` with `sure: false`), resolved by what it learned since: an item that
+ends the drop's narrative, or a sentence that starts it, from any message it reads (any player's, in
+any chat it reads, live or played back) or from a seed. `guess` is the item the turn said, `item`
+the real one, `chat` and `date` (ms) the drop's; `playback` when the message that taught it was
+history. It is published before the reply that taught it, so that a listing that names the item
+counts it after the correction. A whole inventory of the owner's (the `/esporta` file, or a complete
+listing with no filter) forgets the guesses before it, which it counted: none of them is resolved
+after it.
+
 ### The private replies: one event per kind
 
 Every other reply of the bot in the private chat, where every reply is the owner's, is published as
@@ -68,13 +80,19 @@ channel's card, a boss announced, a `/stats`, an older format) is not published 
 
 ## The state's events
 
-The `inventorybot-state` node applies the turns and the private replies, and publishes, in its own
-namespace, `inventorybot-state`:
+The `inventorybot-state` node applies the turns, the private replies and the corrections, and
+publishes, in its own namespace, `inventorybot-state`:
 
 - `inventorybot-state.changed`, `{ sections, refreshed, event? }`: its state changed;
 - `inventorybot-state.gained`, `{ item, sure, qty, exact }`: one per item the owner gained (a drop,
   sure or guessed, a lucky drop, a gift, a craft's output, what a `/usa` gave), live only;
 - `inventorybot-state.refused`: an event its reducer could not apply.
+
+**The state's events announce new facts, never corrections of past facts.** The parser makes sense
+of what happens; the state only records the owner's history. A correction (`inventorybot.resolved`)
+flows from the parser to the state: the state moves the drop's count from the guess to the item, and
+`changed` tells the sections it changed, but it tells no `gained` again and no event of its own for
+it. A script that needs corrections listens to the parser's `inventorybot.resolved`.
 
 ## Refusals
 

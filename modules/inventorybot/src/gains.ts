@@ -16,8 +16,10 @@
  *
  * **Not a gain:** what only observes the inventory (a listing, an `/esamina`, a `/mostra`, a
  * `/ricetta`, a `/dai` refused with the count owned), even when it raises an estimate, nor the
- * lottery or a Pakkomon fight. A guess resolved later moves the count to its real item but is no
- * new gain: it was told once, with `sure: false`.
+ * lottery or a Pakkomon fight. A guess the parser resolves later (`inventorybot.resolved`) moves
+ * the count to its real item but is no new gain: it was told once, with `sure: false`. The state's
+ * events announce new facts, never corrections of past facts: a script that needs the correction
+ * listens to the parser's `inventorybot.resolved`.
  *
  * Each carries the item's count after it and whether that count is exact, as the state holds it.
  */

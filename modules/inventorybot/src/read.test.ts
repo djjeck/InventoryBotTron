@@ -1,3 +1,4 @@
+import { type Event } from '@inventorybottron/grammar';
 import { type BotMessage } from '@megabottron1999/turns/turn-parser.ts';
 import { describe, expect, it } from 'vitest';
 import { InventoryKnowledge } from './knowledge.ts';
@@ -129,7 +130,7 @@ describe('readInventoryBot', () => {
 describe('listedItems', () => {
   const items = (text: string) => listedItems(readReply(text).ev);
 
-  it('gives the items of inventories, recipes, crafts, shows and the lucky prize', () => {
+  it('gives the items of inventories, recipes, crafts, shows, uses, gifts and the lucky prize', () => {
     expect(items('@mario_r, possiedi:\n- una perla [C] x2\n- un sasso [C] x1')).toEqual([
       'una perla',
       'un sasso',
@@ -143,7 +144,17 @@ describe('listedItems', () => {
       items(
         '@mario_r, prendi in mano:\n- un chicco di caffè [R] x2\n- una tazzina vuota [R] x1\ne li metti insieme con cura!\nOttieni: un caffè ristretto!'
       )
-    ).toEqual(['un chicco di caffè', 'una tazzina vuota']);
+    ).toEqual(['un chicco di caffè', 'una tazzina vuota', 'un caffè ristretto']);
+    expect(items('[N] @lucia_b ti ha dato 2x una perla')).toEqual(['una perla']);
+    expect(items('@mario_r, dai 2x una perla a @lucia_b')).toEqual(['una perla']);
+    const use = {
+      type: 'use',
+      text: '',
+      items: [{ name: 'un sasso', rarity: 'C', usable: false, qty: 1 }],
+    };
+    expect(listedItems(use as Event)).toEqual(['un sasso']);
+    const craft = { type: 'craft', ingredients: [], output: null, flavor: '' };
+    expect(listedItems(craft as Event)).toEqual([]);
     expect(
       items(
         '@mario_r il cartografo, mostri orgogliosamente di possedere 14x un candido fazzoletto [C]'

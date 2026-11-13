@@ -35,20 +35,25 @@ const LUCKY = /^Complimenti @(\w+), /u;
 
 /**
  * The item names a reply gives delimited (docs/bot-protocol.md §6): an inventory's or a title
- * list's lines, a recipe's ingredients missing and owned, a craft's ingredients, a `/mostra`'s
- * item and the lucky adventure's prize. Not `/esamina`'s, whose name follows a title with no comma
- * between (§6.7), which the parser cannot tell apart without knowing the titles.
+ * list's lines, a recipe's ingredients missing and owned, a craft's ingredients and output, a
+ * `/mostra`'s item, the items a `/usa` lists, a gift's and a give's item (since 0.7.0, as the player
+ * state learned them before), and the lucky adventure's prize. Not `/esamina`'s, whose name follows
+ * a title with no comma between (§6.7), which the parser cannot tell apart without knowing the
+ * titles.
  */
 export function listedItems(ev: Event): string[] {
   switch (ev.type) {
     case 'inventory':
     case 'title':
+    case 'use':
       return ev.items.map((i) => i.name);
     case 'recipe_detail':
       return [...ev.missing, ...ev.have].map((i) => i.name);
     case 'craft':
-      return ev.ingredients.map((i) => i.name);
+      return [...ev.ingredients.map((i) => i.name), ...(ev.output === null ? [] : [ev.output])];
     case 'show':
+    case 'gift':
+    case 'give':
       return [ev.item];
     case 'drop':
       return ev.kind === 'lucky' ? [ev.item] : [];

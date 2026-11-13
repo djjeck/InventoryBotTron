@@ -30,6 +30,7 @@ describe('the inventorybot parser', () => {
     expect(Object.keys(m.events ?? {})).toEqual([
       'inventorybot.turn',
       ...REPLY_KINDS.map(replyEvent),
+      'inventorybot.resolved',
     ]);
     // Each kind with its own schema, described for the editor.
     expect(m.events?.['inventorybot.craft']?.description).toBe(
@@ -211,6 +212,67 @@ describe('the inventorybot parser', () => {
     ]);
     expect(p.replies[1]).not.toHaveProperty('playback');
     expect(p.events.map((e) => e['playback'])).toEqual([true]);
+  });
+
+  it("resolves the owner's guesses by what it learns since, from any message it reads", async () => {
+    const p = await runParser();
+    const S2 = 'sotto il ponte del canale trovi ';
+    const STECCO = 'lo stecco di legno di un ghiacciolo';
+    p.bot(`@${OWNER}, ${S2}${STECCO} [N] [usabile]!`, { chat: DM });
+    // Another player's guess is not the owner's: never resolved for them.
+    p.bot(`@lucia_b, ${S}una corda di canapa [C]!`);
+    p.kit.runUntil(T0 + MIN);
+    // Another player's listing in the group, played back, names the item.
+    p.bot(`@lucia_b, possiedi:\n- ${STECCO} [N] x1\n- una corda di canapa [C] x1`, {
+      playback: true,
+    });
+    const resolved = p.replies.filter((e) => e.type === 'inventorybot.resolved');
+    expect(resolved).toEqual([
+      {
+        type: 'inventorybot.resolved',
+        t: T0 + MIN,
+        instance: 'inventorybot',
+        chat: DM,
+        guess: 'un ghiacciolo',
+        item: STECCO,
+        raw: `${S2}${STECCO}`,
+        rarity: 'N',
+        tags: ['usabile'],
+        date: T0,
+        playback: true,
+      },
+    ]);
+    // Settled once: nothing more to tell, and the sentence learned from it.
+    p.bot(`@${OWNER}, ${S2}un sasso [C]!`, { chat: DM });
+    expect(p.replies.filter((e) => e.type === 'inventorybot.resolved')).toHaveLength(1);
+    expect(p.outcomes().at(-1)).toMatchObject({ item: 'un sasso', sure: true });
+  });
+
+  it('resolves a guess by a seed, and forgets those a whole inventory counted', async () => {
+    const p = await runParser();
+    const raw = 'un vecchio pescatore ti saluta dal molo e ti lancia una perla';
+    p.bot(`@${OWNER}, ${raw} [C]!`, { chat: DM });
+    p.kit.runUntil(T0 + MIN);
+    expect(await p.act('seed', { items: ['una perla'], prefixes: [] })).toEqual({
+      output: { items: 1, prefixes: 0 },
+    });
+    expect(p.replies.filter((e) => e.type === 'inventorybot.resolved')).toMatchObject([
+      { t: T0 + MIN, guess: 'una perla', item: 'una perla', date: T0 },
+    ]);
+    // Two guesses; a filtered listing forgets neither, a whole one both, unresolved.
+    const told = () => p.replies.filter((e) => e.type === 'inventorybot.resolved').length;
+    const x = 'mentre conti le nuvole dal tetto del forno ti cade in mano ';
+    const y = 'sotto il ponte del canale trovi ';
+    p.bot(`@${OWNER}, ${x}lo stecco di legno di un ghiacciolo [R]!`, { chat: DM });
+    p.bot(`@${OWNER}, ${y}una spada di legno, piccola ma robusta [R]!`, { chat: DM });
+    p.owner('/inventario C');
+    p.bot(`@${OWNER}, possiedi:\n- una perla [C] x1`, { chat: DM });
+    p.bot(`@lucia_b, ${x}una perla [C]!`);
+    expect(told()).toBe(2);
+    p.owner('/inventario');
+    p.bot(`@${OWNER}, possiedi:\n- una perla [C] x1`, { chat: DM });
+    p.bot(`@lucia_b, ${y}una perla [C]!`);
+    expect(told()).toBe(2);
   });
 
   it('runs on a saved graph as the instance runs it, on the node it had in game-bots', async () => {

@@ -17,24 +17,31 @@
  *   0.4.1); its caption alone tells nothing, and a file that came without its text is logged with
  *   why. A reply read from a message played back is marked `playback: true` (since 0.4.0), as the
  *   turn parser marks its turns: a state applies it and announces nothing of it. A turn's `gain`
- *   carries its drop's narrative (`raw`), with which a reader resolves a guess again.
+ *   carries its drop's narrative (`raw`).
+ * - The owner's drops whose item it guessed are kept, and resolved by what it learns since, from
+ *   any message it reads (any player's, in any chat, played back or not) or a seed: each told as
+ *   `inventorybot.resolved` (`src/resolved.ts`, since 0.7.0), before the reply that taught it. A
+ *   whole inventory of the owner's forgets the guesses before it, unresolved: it counted them.
 
  * Each instance keeps what it learns (items and drops' sentences) in its own store
  * (`src/knowledge.ts`), so the base parser is made per instance, with its knowledge, rather than
  * once in the factory. Its action `seed` adds to it what the owner's own export teaches
  * (`scripts/seed-knowledge.ts` of InventoryBotTron makes it), merged with what it knows.
  */
+import { isWholeInventory } from '@inventorybottron/state';
 import { type Plugin } from '@megabottron1999/core';
 import {
   ANSWER_WINDOW_MS,
   turnParserPlugin,
   type TurnParserSpec,
+  type TurnReading,
 } from '@megabottron1999/turns/turn-parser.ts';
 import { z } from 'zod';
 import { InventoryKnowledge, seedSchema } from '#src/knowledge.ts';
 import { readInventoryBot, readStateReply } from '#src/read.ts';
 import { REPLY_SCHEMAS, replyEvent, replyPayload } from '#src/replies.ts';
-import { INVENTORYBOT, TURN_COMMANDS } from '#src/turn.ts';
+import { RESOLVED_EVENT, resolvedPayload, resolvedSchema } from '#src/resolved.ts';
+import { INVENTORYBOT, type InventoryOutcome, TURN_COMMANDS } from '#src/turn.ts';
 
 /** The plugin's id, and the namespace of its events (`inventorybot.turn`). */
 export const INVENTORYBOT_PARSER = 'inventorybot';
@@ -52,7 +59,7 @@ const base = turnParserPlugin(spec(() => undefined)).manifest;
 export const inventorybotPlugin: Plugin = {
   manifest: {
     ...base,
-    events: { ...base.events, ...REPLY_SCHEMAS },
+    events: { ...base.events, ...REPLY_SCHEMAS, [RESOLVED_EVENT]: resolvedSchema },
     interface: {
       ...base.interface,
       actions: {
@@ -67,17 +74,44 @@ export const inventorybotPlugin: Plugin = {
   },
   create: async (ctx) => {
     const known = new InventoryKnowledge(ctx.store);
-    const parser = await turnParserPlugin(spec((m) => readInventoryBot(m, known))).create(ctx);
+    // The turn parser's reading of the bot's message being heard, which the handler below hears
+    // next: its own drop's guess, kept with the message's chat and time.
+    let reading: TurnReading;
+    const parser = await turnParserPlugin(
+      spec((m) => (reading = readInventoryBot(m, known)))
+    ).create(ctx);
+    /** Tells each of the owner's guesses that what it learned resolves. */
+    const tell = (t: number, playback: boolean): void => {
+      for (const r of known.settle())
+        ctx.bus.publish(RESOLVED_EVENT, resolvedPayload(r, playback), t);
+    };
     // The owner's last command in each private chat, which the bot's next reply there answers.
     const last = new Map<string, { text: string; t: number }>();
     const chat = ctx.connector('chat');
     chat.onMessage((m) => {
-      if (!m.chat.startsWith('@')) return;
       if (m.own === true) {
-        if (m.text.trim().startsWith('/')) last.set(m.chat, { text: m.text.trim(), t: m.time });
+        if (m.chat.startsWith('@') && m.text.trim().startsWith('/'))
+          last.set(m.chat, { text: m.text.trim(), t: m.time });
         return;
       }
       if (m.sender.toLowerCase() !== INVENTORYBOT.toLowerCase()) return;
+      const read = reading;
+      reading = undefined;
+      // What the message taught, whoever's and wherever, resolves the guesses before it: told
+      // before the reply that taught it, which may count the item itself.
+      tell(m.time, m.playback);
+      const outcome =
+        read !== undefined && 'outcome' in read ? (read.outcome as InventoryOutcome) : undefined;
+      if (outcome?.kind === 'gain' && !outcome.sure && outcome.raw !== undefined)
+        known.guessed({
+          raw: outcome.raw,
+          guess: outcome.item,
+          rarity: outcome.rarity,
+          tags: outcome.tags,
+          chat: m.chat,
+          t: m.time,
+        });
+      if (!m.chat.startsWith('@')) return;
       const command = last.get(m.chat);
       const query =
         command !== undefined && m.time - command.t <= ANSWER_WINDOW_MS ? command.text : null;
@@ -89,14 +123,12 @@ export const inventorybotPlugin: Plugin = {
         );
       const reply = readStateReply(m.text, query, doc?.text);
       if (reply === undefined) return;
+      // A whole inventory counts every drop before it, as whatever it was: a guess older than it is
+      // never corrected after it, or its item would be counted twice (issue #1).
+      if (isWholeInventory({ ...reply, query })) known.forget(m.time);
       ctx.bus.publish(
         replyEvent(reply.type),
-        replyPayload(reply, {
-          chat: m.chat,
-          query,
-          self: chat.self(),
-          playback: m.playback === true,
-        }),
+        replyPayload(reply, { chat: m.chat, query, self: chat.self(), playback: m.playback }),
         m.time
       );
     });
@@ -105,7 +137,15 @@ export const inventorybotPlugin: Plugin = {
       ...parser,
       interface: {
         ...parser.interface,
-        actions: { ...actions, seed: (input: z.infer<typeof seedSchema>) => known.seed(input) },
+        actions: {
+          ...actions,
+          seed: (input: z.infer<typeof seedSchema>) => {
+            const added = known.seed(input);
+            // What the seed taught resolves the guesses too.
+            tell(ctx.clock.now(), false);
+            return added;
+          },
+        },
       },
     };
   },

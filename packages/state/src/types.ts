@@ -37,10 +37,27 @@ export type DropContext = {
   location?: string | null | undefined;
   /**
    * False when `resolved` is only a guess (neither the item nor the drop's sentence was known): the
-   * drop is kept pending (`drops.pending`) until an event teaches its item.
+   * drop is counted under its guess until its reader learns the item and tells it (`resolved`).
    */
   sure?: boolean | undefined;
 };
+
+/**
+ * A correction of one of the owner's drops whose item was a guess: its reader learned the item
+ * since, and tells it (since 0.2.0). Not a reply of the bot's: the reader resolves its own guesses,
+ * and the state only moves the count from the guess to the item.
+ */
+export interface ResolvedEvent {
+  type: 'resolved';
+  /** The item the drop was counted as. */
+  guess: string;
+  /** Its real item. */
+  item: string;
+  /** When the drop was read (the drop's `date`): ISO 8601 with its UTC offset; null when not known. */
+  dropped: string | null;
+  rarity: string;
+  usable: boolean;
+}
 
 /** The events the state applies: a reply's event, its context, and what its reader resolved. */
 export type StateEvent =
@@ -60,7 +77,8 @@ export type StateEvent =
       AdventureDropEvent | LuckyDropEvent | CraftEvent | UseEvent | GiveEvent | StatsEvent
     > &
       EventContext)
-  | (StatsEvent & EventContext);
+  | (StatsEvent & EventContext)
+  | (ResolvedEvent & EventContext);
 
 /**
  * What the reader knows of the game besides the state, for the replies whose meaning depends on
@@ -109,17 +127,6 @@ export interface SeenItem {
   /** Successful uses; only for an item used. */
   used?: number;
   last_used?: string | null;
-}
-
-/** A drop whose item is a guess, kept until an event teaches it. */
-export interface PendingDrop {
-  /** Its narrative, which the item ends (`raw` of the grammar's drop). */
-  raw: string;
-  /** The item it was counted as. */
-  guess: string;
-  rarity: string;
-  tags: string[];
-  date: string | null;
 }
 
 /** One of the latest drops. */
@@ -207,8 +214,8 @@ export interface State {
   pakkomon: Record<string, PlayerPakkomon>;
   /** The shapes the owner's shaped items had, per item, in the order first seen. */
   shapes: Record<string, PlayerShape[]>;
-  /** The drops whose item is a guess, and the latest drops, newest last. */
-  drops: { pending: PendingDrop[]; latest: Gain[] };
+  /** The latest drops, newest last. */
+  drops: { latest: Gain[] };
 }
 
 /** An estimated holding, as the view shows it. */

@@ -3,6 +3,29 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.7.0 (2026-11-13)
+
+- **The parser resolves the owner's guesses, not the state** (breaking for the state's shape). The
+  parser keeps the owner's drops whose item it guessed (at most 50, in its `knowledge` document)
+  and, whenever any message it reads (any player's, in any chat it reads, played back or live) or a
+  seed teaches it an item or a sentence that resolves one, publishes a new event,
+  **`inventorybot.resolved`** (`{ chat, guess, item, raw, rarity, tags, date, playback? }`, `date`
+  the drop's time in ms), before the reply that taught it. A whole inventory of the owner's (the
+  `/esporta` file, or a complete unfiltered listing) forgets the guesses before it unresolved, since
+  it counted them: the parser's form of the state's fix of issue #1. It now learns item names from a
+  craft's output, a `/usa`'s items, a gift and a give too, as the state did.
+- **The `inventorybot-state` node** applies `inventorybot.resolved` by moving the drop's count from
+  the guess to the item, with the state package's new `resolved` event, and tells nothing of it in
+  its own events: no `gained` and no event of its own (the state's events announce new facts, never
+  corrections of past facts; `changed` still tells the sections changed). It keeps no
+  `drops.pending` any more: its store's first migration takes it out of a kept state, so a
+  `state.get({ path: 'drops.pending' })` finds nothing. Guesses that were pending in the state at
+  the update are not carried to the parser: they stay counted under their guess until the next whole
+  listing, so an `/esporta` after the update sets the inventory right.
+- It imports the player state `^0.2.0`: **update `inventorybot-player-state` to 0.2.0 together with
+  this version.** No edge needs rebinding: the new event is in the parser's namespace, which the
+  state's `events` edge already binds. A script on `inventorybot-state.gained` is unchanged.
+
 ## 0.6.0 (2026-11-13)
 
 - **One event type per kind of reply, instead of `inventorybot.reply`** (breaking). Each private

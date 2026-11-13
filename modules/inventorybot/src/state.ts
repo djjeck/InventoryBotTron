@@ -4,9 +4,12 @@
  * logic only.
  *
  * - **`inventorybot.turn`**: a `gain` is the owner's drop, its item resolved by the parser; a guess
- *   (`sure: false`) is applied as one, kept pending with its narrative (`raw`) until a later event
- *   teaches the item. A gain of before 0.2.0, without `raw`, is a lucky drop if sure, and a guess
- *   whose narrative is its item if not. Any other outcome changes nothing.
+ *   (`sure: false`) is applied as one, counted under its guess. A gain of before 0.2.0, without
+ *   `raw`, is a lucky drop if sure, and a guess whose narrative is its item if not. Any other
+ *   outcome changes nothing.
+ * - **`inventorybot.resolved`** (since 0.7.0): the parser's correction of one of those guesses, the
+ *   state's `resolved` event: the count moves from the guess to the item. The parser resolves; the
+ *   state only records.
  * - **`inventorybot.<kind>`** (`src/replies.ts`, since 0.6.0): the grammar's event of a private
  *   reply, the owner's (`dm`, and their username when the account knows it), read with the command
  *   it answers. What the reply leaves
@@ -20,12 +23,17 @@ import { type BusEvent } from '@megabottron1999/core';
 import { type Mark } from '@megabottron1999/turns/state-plugin.ts';
 import { z } from 'zod';
 import { CONTEXT_FIELDS, REPLY_KINDS, replyEvent, type ReplyKind, replyKindOf } from './replies.ts';
+import { RESOLVED_EVENT, type resolvedSchema } from './resolved.ts';
 
 /** The plugin's id, and the namespace of its events (`inventorybot-state.changed`). */
 export const INVENTORYBOT_STATE = 'inventorybot-state';
 
 /** The parser's events it applies: the turns, and each kind of private reply. */
-export const CONSUMES: readonly string[] = ['inventorybot.turn', ...REPLY_KINDS.map(replyEvent)];
+export const CONSUMES: readonly string[] = [
+  'inventorybot.turn',
+  ...REPLY_KINDS.map(replyEvent),
+  RESOLVED_EVENT,
+];
 
 /** The paths of the state its node's panel draws first, and its card's line. */
 export const PINS = ['inventory.held', 'drops.latest'];
@@ -45,13 +53,6 @@ const gain = z.object({
   tags: z.array(z.string()).describe('Tags'),
   date: date.describe('When'),
   sure: z.boolean().describe('Sure'),
-});
-const pending = z.object({
-  raw: z.string().describe('Drop'),
-  guess: z.string().describe('Counted as'),
-  rarity: z.string().describe('Rarity'),
-  tags: z.array(z.string()).describe('Tags'),
-  date: date.describe('When'),
 });
 const pakkomon = z.object({
   name: z.string().describe('Name'),
@@ -136,7 +137,6 @@ export const stateSchema = z.object({
     .describe('Shapes'),
   drops: z
     .object({
-      pending: z.array(pending).describe('Guessed, pending'),
       latest: z.array(gain).describe('Latest drops'),
     })
     .describe('Drops'),
@@ -213,9 +213,25 @@ function fromTurn(e: BusEvent): StateEvent | undefined {
   return { type: 'drop', kind: 'adventure', raw: raw ?? item, rarity, usable, sure, ...context };
 }
 
+/** A guess resolved by the parser, as the state's correction of the owner's drop. */
+function fromResolved(e: BusEvent): StateEvent {
+  const r = e as unknown as z.output<typeof resolvedSchema>;
+  return {
+    type: 'resolved',
+    guess: r.guess,
+    item: r.item,
+    dropped: isoOf(r.date),
+    rarity: r.rarity,
+    usable: r.tags.includes('usabile'),
+    dm: true,
+    date: isoOf(e.t),
+  };
+}
+
 /** The state's event of one of the parser's, the owner's name learned from it; none to apply. */
 export function toStateEvent(s: State, e: BusEvent): StateEvent | undefined {
   if (e.type === 'inventorybot.turn') return fromTurn(e);
+  if (e.type === RESOLVED_EVENT) return fromResolved(e);
   const kind = replyKindOf(e.type);
   return kind === undefined ? undefined : fromReply(s, e, kind);
 }

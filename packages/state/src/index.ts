@@ -12,19 +12,20 @@
  *
  * The state reads the grammar's events (`@inventorybottron/grammar`) with the context of each reply
  * (its date, whose it is, the command it answers) and what its reader resolved (a drop's item, a
- * craft's recipe, a use's item): `StateEvent`. What depends on the game beyond one reply (an item's
+ * craft's recipe, a use's item): `StateEvent`; and its reader's corrections of the owner's guessed
+ * drops (`resolved`, since 0.2.0), which the state applies but never makes itself. What depends on the game beyond one reply (an item's
  * rarity, a recipe's ingredients, whether a use consumes the item) is the reader's to give
  * (`Know`); without it the state stands in with what it knows itself. It ships no knowledge of the
  * game. Pure logic only: no Node APIs, no npm packages.
  */
 export { instant, isoOf, isoPlusSeconds } from './dates.ts';
-export { MAX_LATEST, MAX_PENDING, taughtItems } from './pending.ts';
-export { apply, initialState, reduce } from './reduce.ts';
+export { apply, initialState, MAX_LATEST, reduce } from './reduce.ts';
 export {
   type Addressing,
   inventoryScope,
   isFailedUse,
   isMine,
+  isWholeInventory,
   type Listing,
   nameKey,
   pakkomonOf,
@@ -44,11 +45,11 @@ export type {
   Holding,
   HoldingVia,
   Know,
-  PendingDrop,
   PlayerPakkomon,
   PlayerShape,
   PlayerView,
   RecipeList,
+  ResolvedEvent,
   SeenItem,
   State,
   StateEvent,

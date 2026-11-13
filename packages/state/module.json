@@ -1,6 +1,6 @@
 {
   "id": "inventorybot-player-state",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "api": "1",
   "provides": "@inventorybottron/state",
   "description": "InventoryBot's player state: the owner's inventory and history, kept one reply at a time",
