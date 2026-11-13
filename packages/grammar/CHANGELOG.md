@@ -3,6 +3,15 @@
 The module's version follows its entry's API (`src/index.ts`), not any repository's releases
 (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.4.0 (2026-11-13)
+
+- **The entry exports what a reader of the player's state needs**, so that the player state
+  (`@inventorybottron/state`, a module of its own) imports the grammar by its contract rather than
+  its internal files: the inventory commands (`INVENTORY_COMMANDS`, `INVENTORY_LIST_COMMANDS`),
+  shaped items (`unshaped`, `shapeOf`, `shapeGiven`), Pakkomon as items (`PAKKOMON`, `pakkomonItem`)
+  and the text helpers (`codePointLength`, `compareCodePoints`, `sliceCodePoints`, `splitWords`,
+  `stripEndChars`, `stripWs`, `WS_CLASS`). Nothing else changes.
+
 ## 0.3.1 (2026-11-12)
 
 - The grammar's specification, `docs/bot-protocol.md`, moved from the InventoryBot wiki to

@@ -18,9 +18,19 @@
  * the grammar's specification, and the wiki's pipeline by its phases and files (`build.ts`): the
  * wiki (djjeck/inventorybot-wiki) reads every export with this grammar.
  */
-import { classify } from './classify.ts';
+import { classify, INVENTORY_COMMANDS, INVENTORY_LIST_COMMANDS } from './classify.ts';
 import { type DropKnowledge, type DropResolution, guessDropItem, resolveDrop } from './drops.ts';
-import { codePointLength } from './lib/text.ts';
+import {
+  codePointLength,
+  compareCodePoints,
+  sliceCodePoints,
+  splitWords,
+  stripEndChars,
+  stripWs,
+  WS_CLASS,
+} from './lib/text.ts';
+import { PAKKOMON, pakkomonItem } from './pakkomon.ts';
+import { shapeGiven, shapeOf, unshaped } from './shapes.ts';
 import { replyNormalizer } from './titles.ts';
 
 export type {
@@ -66,6 +76,39 @@ export type {
   UseEvent,
 } from './types.ts';
 export { classify, type DropKnowledge, type DropResolution, guessDropItem, resolveDrop };
+
+/**
+ * The commands that list the inventory (docs/bot-protocol.md 6.8): `/inventario` and its aliases,
+ * which take a filter, and `/collezioni`, `/inv2` and `/esporta`, which take none.
+ */
+export { INVENTORY_COMMANDS, INVENTORY_LIST_COMMANDS };
+
+/**
+ * Shaped items (docs/bot-protocol.md 2.6): the item a shaped item is (`unshaped`), its shape
+ * (`shapeOf`), and the shape a use's reply gave it (`shapeGiven`).
+ */
+export { shapeGiven, shapeOf, unshaped };
+
+/**
+ * Pakkomon as items (docs/bot-protocol.md 2.9): the item a Pakkomon is (`pakkomonItem(name)`,
+ * `un Pakkomon di nome NAME`), and the one item every Pakkomon is for a reader of the game
+ * (`PAKKOMON`, `un Pakkomon`).
+ */
+export { PAKKOMON, pakkomonItem };
+
+/**
+ * The text helpers the grammar reads with, which know nothing of the game: whitespace and words
+ * as the bot's texts have them, and strings by code points.
+ */
+export {
+  codePointLength,
+  compareCodePoints,
+  sliceCodePoints,
+  splitWords,
+  stripEndChars,
+  stripWs,
+  WS_CLASS,
+};
 
 /** What the caller knows of the game, which the module never ships. */
 export interface Knowledge extends DropKnowledge {

@@ -101,7 +101,12 @@ everyone else the contract is the entry, `src/index.ts`:
   follows the longest sentence prefix of `known.prefixes` that starts it;
 - `guessDropItem(raw)`: a guess at the item of a drop `resolveDrop` cannot resolve (what follows the
   last indefinite article, else all of `raw`), from which nothing should be learned;
-- `Knowledge` (`items`, `prefixes`, optional `titles`), `DropKnowledge` and `DropResolution`.
+- `Knowledge` (`items`, `prefixes`, optional `titles`), `DropKnowledge` and `DropResolution`;
+- since 0.4.0, what a reader of the game's state needs besides: the inventory commands
+  (`INVENTORY_COMMANDS`, `INVENTORY_LIST_COMMANDS`), shaped items (`unshaped`, `shapeOf`,
+  `shapeGiven`), Pakkomon as items (`PAKKOMON`, `pakkomonItem`) and the text helpers
+  (`codePointLength`, `compareCodePoints`, `sliceCodePoints`, `splitWords`, `stripEndChars`,
+  `stripWs`, `WS_CLASS`).
 
 It is also a library module of MegaBotTron1999 (its `docs/bot-os-api.md` §7): `module.json` makes it
 the module `inventorybot-grammar`, with no plugins, which provides `@inventorybottron/grammar`.
@@ -127,7 +132,7 @@ by its phases: the wiki reads every export with this grammar.
 ## The inventorybot module
 
 `modules/inventorybot/`, the workspace package `@inventorybottron/inventorybot` and the module
-`inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.3.1`), whose plugin entry
+`inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0`), whose plugin entry
 `src/plugins/inventorybot.ts` offers the `inventorybot` parser: InventoryBot's answers to the
 owner's turns, on MegaBotTron1999's turn parser (its `docs/bot-os-api.md` §5), published as
 `inventorybot.turn` (`{ chat, outcome }`, the outcome's shape in `src/turn.ts`), with the contract

@@ -3,6 +3,11 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.1.2 (2026-11-13)
+
+- It imports the grammar `^0.4.0`, whose entry exports more; it uses nothing new of it. No change to
+  the plugin.
+
 ## 0.1.1 (2026-11-12)
 
 - **The action `seed`**, which 0.1.0 already offered, is described: the owner adds to what the

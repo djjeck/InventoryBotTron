@@ -3,7 +3,23 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { classify, guessDropItem, type Knowledge, normalizeReply, resolveDrop } from './index.ts';
+import {
+  classify,
+  compareCodePoints,
+  guessDropItem,
+  INVENTORY_COMMANDS,
+  INVENTORY_LIST_COMMANDS,
+  type Knowledge,
+  normalizeReply,
+  PAKKOMON,
+  pakkomonItem,
+  resolveDrop,
+  shapeGiven,
+  shapeOf,
+  splitWords,
+  stripWs,
+  unshaped,
+} from './index.ts';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -58,6 +74,26 @@ describe('the entry', () => {
       '@msx80, possiedi:'
     );
     expect(normalizeReply(text, {})).toBe(text);
+  });
+});
+
+describe('the helpers it exports for a reader of the game', () => {
+  it('the_inventory_commands', () => {
+    expect(INVENTORY_COMMANDS).toContain('/inventario');
+    expect(INVENTORY_LIST_COMMANDS).toContain('/esporta');
+  });
+
+  it('shaped_items_and_pakkomon_as_items', () => {
+    const shaped = 'una spada di legno modellato a forma di stella';
+    expect([unshaped(shaped), shapeOf(shaped)]).toStrictEqual(['una spada di legno', 'stella']);
+    expect(shapeGiven('@u, prendi la colla e gli dai la forma di stella')).toBe('stella');
+    expect(pakkomonItem('Fulmine')).toBe(`${PAKKOMON} di nome Fulmine`);
+  });
+
+  it('the_text_helpers', () => {
+    expect(stripWs('  un sasso \n')).toBe('un sasso');
+    expect(splitWords('un  sasso')).toStrictEqual(['un', 'sasso']);
+    expect(compareCodePoints('a', 'b')).toBeLessThan(0);
   });
 });
 

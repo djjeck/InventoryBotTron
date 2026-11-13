@@ -1,9 +1,9 @@
 {
   "id": "inventorybot",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "api": "1",
   "provides": "@inventorybottron/inventorybot",
   "description": "InventoryBot's parser plugin: the owner's adventures, read live with what it learns",
-  "imports": { "@inventorybottron/grammar": "^0.3.1" },
+  "imports": { "@inventorybottron/grammar": "^0.4.0" },
   "plugins": ["src/plugins/inventorybot.ts"]
 }
