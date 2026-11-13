@@ -78,14 +78,26 @@ It reads every message of the bot, in order, as the node reads them live, prints
 (`{"items": [...], "prefixes": [...]}`) on stdout and a summary on stderr, and writes nothing. Then
 send it to the node's action `seed`, which adds it to what the node knows and answers how many items
 and prefixes were new: on the web UI's Plugins page (the node `inventorybot`, its action `seed`, the
-file's content as its input), or from the host, through the control API on the container's loopback:
+file's content as its input), or from the host, through the control API on the container's loopback,
+with the image's own Node.js, `<container>` being the name of the instance's container:
 
 ```sh
-docker cp ~/seed.json megabottron1999:/tmp/seed.json
-docker exec megabottron1999 wget -qO- --header 'content-type: application/json' \
-  --post-file /tmp/seed.json http://127.0.0.1:8081/plugins/inventorybot/actions/seed
-docker exec megabottron1999 rm /tmp/seed.json
+docker exec -i <container> node -e '
+  fetch("http://127.0.0.1:8081/plugins/inventorybot/actions/seed", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: require("fs").readFileSync(0, "utf8"),
+  }).then(async (r) => {
+    console.log(r.status, await r.text());
+    if (!r.ok) process.exitCode = 1;
+  });
+' < ~/seed.json
 ```
+
+The seed goes through the command's standard input, so nothing is copied into the container. It
+prints the answer's status and body whatever they are: on a refusal, the API's own message says why
+(a `400` with what the input lacked, a `404` without a running `inventorybot` node), where
+`wget -qO-` would print only `server returned error`.
 
 ## Developing
 
