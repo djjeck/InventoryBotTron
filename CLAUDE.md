@@ -10,6 +10,7 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
 
 ## Layout
 
+- `docs/bot-protocol.md`: InventoryBot's protocol (below, "The protocol").
 - `packages/grammar/`: InventoryBot's reply grammar, the module `inventorybot-grammar`, which
   provides `@inventorybottron/grammar` (below). It came from the wiki's `packages/grammar` at its
   commit `1ca8615`, as a copy (its history stays in the wiki's repository).
@@ -102,9 +103,9 @@ MegaBotTron1999 installs it from this repository's folder or its GitHub link, fi
 sources. Its tests sit beside its files; the reply builders they share are in its `test/`
 (`#test/texts.ts`). The wiki also tests the classifier through its whole pipeline.
 
-Comments in the grammar name the reply formats by their sections in the wiki's
-`docs/bot-protocol.md`, the grammar's specification, and the wiki's pipeline by its phases: the wiki
-reads every export with this grammar.
+Comments in the grammar name the reply formats by their sections in
+[docs/bot-protocol.md](docs/bot-protocol.md), the grammar's specification, and the wiki's pipeline
+by its phases: the wiki reads every export with this grammar.
 
 ### Who uses it
 
@@ -114,6 +115,29 @@ reads every export with this grammar.
 - **A module that still imports the former name**, `@inventorybot-wiki/grammar` (0.2.0, the wiki's
   install of `inventorybot-grammar`), keeps that install until it moves to
   `@inventorybottron/grammar` ([its changelog](packages/grammar/CHANGELOG.md)).
+
+## The protocol
+
+[docs/bot-protocol.md](docs/bot-protocol.md) explains InventoryBot to someone who has never played
+it: its concepts, its commands, and the grammar and meaning of every reply, with the older formats
+of group history. It is the grammar's specification, and this repository is its home: a change in
+the bot's replies, or in what is known of them, is made here, in the same commit as the grammar's
+change. It came from the wiki's `docs/bot-protocol.md` at the wiki's commit `c3f6a1a` (its history
+stays in the wiki's repository).
+
+- **Its examples are tests.** Each reply example is a `bot-reply` block whose attributes say what
+  the reply means (the doc's section 8). The wiki reads the doc from its submodule and checks every
+  block against this grammar through its whole pipeline
+  ([`classify.docs-examples.test.ts`](https://github.com/djjeck/InventoryBot-wiki/blob/main/src/inventorybot/classify.docs-examples.test.ts)),
+  and its golden outputs replay the blocks as a synthetic chat: a changed or new block changes the
+  wiki's golden files when its pin moves, and that pull request explains them.
+- **It holds no game content,** like everything here: `check:universe` scans it as it scans every
+  tracked Markdown file, and its examples use the invented universe.
+- The wiki's own input docs stay there, linked from the doc:
+  [`telegram-export.md`](https://github.com/djjeck/InventoryBot-wiki/blob/main/docs/telegram-export.md),
+  the export format, and
+  [`channels.md`](https://github.com/djjeck/InventoryBot-wiki/blob/main/docs/channels.md), the
+  encyclopedia channels' cards.
 
 ## Versions
 

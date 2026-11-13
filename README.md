@@ -6,9 +6,10 @@ packages that depend on nothing, and the
 [InventoryBot wiki](https://github.com/djjeck/inventorybot-wiki) reads a player's exports with the
 same packages.
 
-| Path               | What it is                                                                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/grammar` | InventoryBot's reply grammar: classify a reply, resolve a drop's item, strip titles. The module `inventorybot-grammar`, which provides `@inventorybottron/grammar`. |
+| Path                                           | What it is                                                                                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/bot-protocol.md`](docs/bot-protocol.md) | InventoryBot's protocol: the game's concepts, its commands and the grammar of every reply. The grammar's specification.                                             |
+| `packages/grammar`                             | InventoryBot's reply grammar: classify a reply, resolve a drop's item, strip titles. The module `inventorybot-grammar`, which provides `@inventorybottron/grammar`. |
 
 The repository ships no game content: no item, recipe or place of the game, no flavour text and no
 real username. What a bot knows of the game it learns by playing, into its own store

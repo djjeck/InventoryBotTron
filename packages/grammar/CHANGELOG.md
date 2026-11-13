@@ -3,6 +3,12 @@
 The module's version follows its entry's API (`src/index.ts`), not any repository's releases
 (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.3.1 (2026-11-12)
+
+- The grammar's specification, `docs/bot-protocol.md`, moved from the InventoryBot wiki to
+  InventoryBotTron ([docs/bot-protocol.md](../../docs/bot-protocol.md)), and the entry's comment
+  names it there. No change to what the entry exports or means.
+
 ## 0.3.0 (2026-11-12)
 
 - **Breaking: the module moved, and its import name changed.** It now lives in

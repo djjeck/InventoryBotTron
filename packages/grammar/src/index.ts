@@ -14,9 +14,9 @@
  * knowledge at all, not even cue words (InventoryBotTron's CLAUDE.md, "Game content"). Pure logic
  * only: no Node APIs, no npm packages.
  *
- * Comments name the reply formats by their sections in the InventoryBot wiki's
- * `docs/bot-protocol.md`, and the wiki's pipeline by its phases and files (`build.ts`): the wiki
- * (djjeck/inventorybot-wiki) reads every export with this grammar.
+ * Comments name the reply formats by their sections in InventoryBotTron's `docs/bot-protocol.md`,
+ * the grammar's specification, and the wiki's pipeline by its phases and files (`build.ts`): the
+ * wiki (djjeck/inventorybot-wiki) reads every export with this grammar.
  */
 import { classify } from './classify.ts';
 import { type DropKnowledge, type DropResolution, guessDropItem, resolveDrop } from './drops.ts';

@@ -1,5 +1,5 @@
 /**
- * classify.ts: what each bot reply is read as (the InventoryBot wiki's docs/bot-protocol.md). The
+ * classify.ts: what each bot reply is read as (docs/bot-protocol.md). The
  * wiki also tests the classifier through its pipeline, with the commands each reply answers.
  */
 import { describe, expect, it } from 'vitest';

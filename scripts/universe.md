@@ -19,23 +19,35 @@ player sees anyway in a fixed reply text, and says why it is allowed.
 
 ## Items
 
+- il primo numero di Topo Detective
+- lo stecco di legno di un ghiacciolo
 - name <!-- a placeholder in grammars and comments (NAME, `- name [R]`) -->
+- un apriscatole storto
 - un astrolabio da cartografo
+- un attestato di buona azione
 - un barattolo di miele
+- un barattolo di vetro con qualche conchiglia dentro
 - un biscotto Lunetta
 - un biscotto Stellina
+- un caffè ristretto
+- un candido fazzoletto
+- un chicco di caffè
+- un ciuffo di morbide setole di tasso
 - un colino di plastica
 - un dado a dodici facce
 - un dado di legno
 - un elegante cappello piumato
 - un fiorino ƒ
 - un fischietto di quelli da carnevale
+- un fischietto di quelli da carnevale che fanno le trombette
 - un floppy disk incrinato
 - un granello di sale grosso
 - un grembiule da cuoco
+- un Motocarro anni 70
 - un nastro da pacchi
 - un paio di mollette
 - un piccolo annaffiatoio
+- un rampino di ferro
 - un sasso
 - un secchio di fango
 - un seme di Zaffirella
@@ -46,11 +58,15 @@ player sees anyway in a fixed reply text, and says why it is allowed.
 - un uovo di quaglia
 - un vortice
 - un vortice croccante di energia biscottosa
+- una candela mezza consumata
 - una caps rossa
 - una chiave di ebano 🔑
 - una conchiglia
+- una corda di canapa
 - una ghianda
 - una ghianda d'oro
+- una latta di piselli
+- una manciata di linguette di latta
 - una moneta d'oro <!-- public: the game's currency, named in the bot's fixed level-up text -->
 - una perla
 - una sedia pieghevole
@@ -58,19 +74,30 @@ player sees anyway in a fixed reply text, and says why it is allowed.
 - una spada di cartone
 - una spada di legno
 - una spada di legno, piccola ma robusta
+- una tazzina vuota
 
 ## Recipes
 
+- Chiodi storti
+- Corso di vela
 - Gara di cucina
+- L'ancora nel fango
+- L'ombra dell'albero
 - Merenda veloce
 - Muro
+- Orto in vaso
+- Pennello rustico
+- Pizza della nonna
 - Pratica cestina
 - Torre
 
 ## Places
 
+- ai piedi del monte Grevolo ⛰
 - in cima al monte Grevolo 🏔
 - nel bosco nebbioso di Valtorbo 🌲
+- nel magnifico Palazzo di Cristallo 🏰
+- nell'immenso deserto di Sabbiora 🏜
 - nella baia di Scogliola 🦀
 - nella palude sussurrante 🌾
 - nella valle ventosa 🏞
@@ -96,3 +123,4 @@ Without `@`. Placeholders used in prose and comments (`@u`, `@username`) count a
 - v
 - w
 - x
+- y
