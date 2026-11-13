@@ -1,6 +1,6 @@
 {
   "name": "@inventorybottron/inventorybot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "InventoryBot's MegaBotTron1999 plugins, as a module: the parser of the owner's adventures",
   "license": "MIT",

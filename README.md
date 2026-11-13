@@ -26,6 +26,33 @@ must move to `@inventorybottron/grammar` first ([its changelog](packages/grammar
 The `inventorybot` node reads the owner's own Telegram account (`telegram-user`): its edge reads the
 private chat with the bot, and the game's group if the owner plays there.
 
+## Seeding the parser
+
+The `inventorybot` node starts knowing nothing of the game, and is sure of a drop's item only once
+it has seen the item listed (an `/inventario`, a recipe, a craft, a `/mostra`) or the drop's
+sentence before a known item. To start from what the owner's own history teaches, seed it from their
+Telegram Desktop exports: the private chat with the bot and the groups where it plays, in HTML
+(Telegram Desktop → the chat's menu → _Export chat history_ → HTML; media can all be left out, but
+_Files_ keeps `/esporta`'s inventory file, which the seed reads too). Keep the exports and the seed
+outside this repository:
+
+```sh
+node scripts/seed-knowledge.ts ~/exports/ChatExport_2026-11-12 ~/exports/ChatExport_Group > ~/seed.json
+```
+
+It reads every message of the bot, in order, as the node reads them live, prints the seed
+(`{"items": [...], "prefixes": [...]}`) on stdout and a summary on stderr, and writes nothing. Then
+send it to the node's action `seed`, which adds it to what the node knows and answers how many items
+and prefixes were new: on the web UI's Plugins page (the node `inventorybot`, its action `seed`, the
+file's content as its input), or from the host, through the control API on the container's loopback:
+
+```sh
+docker cp ~/seed.json megabottron1999:/tmp/seed.json
+docker exec megabottron1999 wget -qO- --header 'content-type: application/json' \
+  --post-file /tmp/seed.json http://127.0.0.1:8081/plugins/inventorybot/actions/seed
+docker exec megabottron1999 rm /tmp/seed.json
+```
+
 ## Developing
 
 Node.js 24 (`.nvmrc`). `git submodule update --init` (MegaBotTron1999, in `vendor/`), `npm install`,

@@ -3,6 +3,14 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.1.1 (2026-11-12)
+
+- **The action `seed`**, which 0.1.0 already offered, is described: the owner adds to what the
+  parser knows the items and drops' sentences of their own export, `{ items, prefixes }` as
+  InventoryBotTron's `scripts/seed-knowledge.ts` prints them, merged with what it knows and bounded
+  as the rest; it answers how many of each were new. The owner calls it from the Plugins page or the
+  control API (InventoryBotTron's README, "Seeding the parser"). No change to the plugin.
+
 ## 0.1.0 (2026-11-12)
 
 - **The `inventorybot` parser plugin, moved here** from the `game-bots` module of

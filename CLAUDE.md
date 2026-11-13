@@ -144,6 +144,13 @@ with the same plugin id, event and store, so a graph's node keeps running on its
   and a drop's item once its sentence is known, both `sure`. Any other drop is a guess,
   `sure: false`, from which nothing is learned: cut at an article where it parts from an earlier
   unknown drop, else after its last indefinite article (the grammar's `guessDropItem`).
+- **Seeding:** its action `seed` merges `{ items, prefixes }` into what it knows. The owner makes
+  one from their own exports with `scripts/seed-knowledge.ts` (the root's, not the module's: it
+  reads files), which reads every message of the bot in a Telegram Desktop HTML export
+  (`scripts/export-pages.ts`, the format of the wiki's `docs/telegram-export.md`) in order through
+  the module's `learnFrom`, as the node would have read them live, and prints the seed on stdout. It
+  writes nothing; the exports and the seed never enter this repository, and its tests use invented
+  pages (README, "Seeding the parser").
 - Its tests run it in MegaBotTron1999's dev kit (`test/run.ts`), on the invented universe.
 
 ## The protocol

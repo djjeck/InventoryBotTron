@@ -1,6 +1,6 @@
 {
   "id": "inventorybot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "api": "1",
   "provides": "@inventorybottron/inventorybot",
   "description": "InventoryBot's parser plugin: the owner's adventures, read live with what it learns",
