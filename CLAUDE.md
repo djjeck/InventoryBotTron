@@ -15,13 +15,19 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
   provides `@inventorybottron/grammar` (below). It came from the wiki's `packages/grammar` at its
   commit `1ca8615`, as a copy (its history stays in the wiki's repository).
 - `packages/state/`: the player state, next. Not there yet.
-- `modules/inventorybot/`: the MegaBotTron1999 plugins, next. Not there yet. MegaBotTron1999 is
-  vendored (`vendor/MegaBotTron1999`, a git submodule pinned to a tag, its `docs/bot-os-api.md`
-  §7.5) only once something imports it; nothing does yet.
+- `modules/inventorybot/`: the MegaBotTron1999 module `inventorybot`, with the `inventorybot` parser
+  plugin (below, "The inventorybot module").
+- `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.0-alpha.17`),
+  whose `packages/*` are workspaces, so that the modules are written, type-checked and tested
+  against the shell they run in (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the
+  shell is made in its repository, and the pin is moved here (with `npm install` for the lockfile)
+  in a commit of its own.
 
 A package imports nothing outside its own folder but other packages of this repository
 (`@inventorybottron/*`): no npm package, no Node API, nothing of MegaBotTron1999, so that the wiki,
-which runs in a browser, can use it as it is. ESLint enforces it.
+which runs in a browser, can use it as it is. A module imports only `node:*`, `@megabottron1999/*`,
+`zod`, its own files and the modules it declares (the grammar), and no MegaBotTron1999 actor:
+nothing here plays. ESLint enforces both, and `scripts/modules.test.ts` the module format.
 
 ## Development process
 
@@ -66,6 +72,8 @@ InventoryBot is meant to be discovered by playing, so this repository holds no g
   cue words (words that would tell an item's name from the sentence before it). Everything it
   resolves against is the caller's (`Knowledge`). A rule of the language is not knowledge:
   `guessDropItem`'s indefinite article stays.
+- **Neither does a module:** the `inventorybot` parser starts knowing nothing and resolves drops
+  only against its own store; the articles its unknown drops are cut at are the language's.
 
 This is enforced, not left to judgement: `npm run check:universe` (`scripts/check-universe.ts` and
 `scripts/universe.ts`, run by `validate`, `ci` and GitHub CI) fails on any entity, found where the
@@ -115,6 +123,28 @@ by its phases: the wiki reads every export with this grammar.
 - **A module that still imports the former name**, `@inventorybot-wiki/grammar` (0.2.0, the wiki's
   install of `inventorybot-grammar`), keeps that install until it moves to
   `@inventorybottron/grammar` ([its changelog](packages/grammar/CHANGELOG.md)).
+
+## The inventorybot module
+
+`modules/inventorybot/`, the workspace package `@inventorybottron/inventorybot` and the module
+`inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.3.1`), whose plugin entry
+`src/plugins/inventorybot.ts` offers the `inventorybot` parser: InventoryBot's answers to the
+owner's turns, on MegaBotTron1999's turn parser (its `docs/bot-os-api.md` §5), published as
+`inventorybot.turn` (`{ chat, outcome }`, the outcome's shape in `src/turn.ts`), with the contract
+`state.rest` and `actions.sent` a turn-actor binds to. It came from RegnoTron's `game-bots` module
+with the same plugin id, event and store, so a graph's node keeps running on its instance
+([its changelog](modules/inventorybot/CHANGELOG.md)).
+
+- `src/read.ts` reads a message with the grammar: whose reply it is, a gain or a cooldown, and what
+  it teaches; `src/knowledge.ts` is what the instance knows, kept in its store's `knowledge`
+  document (at most 5000 items, 1000 prefixes and the latest 200 unknown drops); `src/drop-cut.ts`
+  guesses where an unknown drop's item begins from an earlier one of its sentence.
+- **It knows only what it reads** ("Game content", below): the items an inventory, a recipe, a
+  craft, a `/mostra` or the lucky adventure lists; a drop's sentence once it ends with a known item,
+  and a drop's item once its sentence is known, both `sure`. Any other drop is a guess,
+  `sure: false`, from which nothing is learned: cut at an article where it parts from an earlier
+  unknown drop, else after its last indefinite article (the grammar's `guessDropItem`).
+- Its tests run it in MegaBotTron1999's dev kit (`test/run.ts`), on the invented universe.
 
 ## The protocol
 
@@ -174,10 +204,13 @@ files git tracks or would track counted).
 - **Test data is synthetic,** in the invented universe; tests never read real exports.
 - **Read-only.** Nothing here sends a message to the bot or automates play.
 - **Coverage stays at or above 90%** on statements, branches, functions and lines, for the whole and
-  for each package's `src/` on its own (`vitest.config.ts` sets a threshold per package).
+  for each package's and each module's `src/` on its own (`vitest.config.ts` sets a threshold for
+  each).
 - **Dependencies:** the root has dev dependencies only, as few as possible, each justified in the
   commit that adds it, pinned to exact versions at least two weeks old, with `package-lock.json`
-  committed; the same for the GitHub Actions the workflow uses. A package has none.
+  committed; the same for the GitHub Actions the workflow uses. A package or a module has none: a
+  module's `@megabottron1999/*` and `zod` are the workspaces' in development and the host's in an
+  instance.
 
 ## Conventions
 

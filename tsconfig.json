@@ -19,6 +19,8 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["packages", "scripts", "vitest.config.ts"],
+  // The packages, the modules and the root's scripts. MegaBotTron1999 (vendor/) is type-checked by
+  // its own repository; what the modules import from it is checked here through those imports.
+  "include": ["packages", "modules", "scripts", "vitest.config.ts"],
   "exclude": ["**/node_modules"]
 }

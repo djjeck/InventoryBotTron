@@ -26,6 +26,24 @@ const FOREIGN_IMPORTS = {
   message: 'A package imports only its own files and @inventorybottron/* (CLAUDE.md).',
 };
 
+/**
+ * A module has no npm dependency of its own (MegaBotTron1999's docs/bot-os-api.md §7.1): its code
+ * imports only Node, MegaBotTron1999 (`@megabottron1999/*`, the host's copy), zod, the grammar
+ * (`@inventorybottron/grammar`, which it declares) and its own files. `scripts/modules.test.ts`
+ * checks the same, and that each module declares the modules it imports in its `module.json`.
+ */
+const MODULE_FOREIGN_IMPORTS = {
+  regex: '^(?!node:|@megabottron1999/|@inventorybottron/grammar$|zod$|#src/|#test/|\\./|vitest$)',
+  message:
+    'A module imports only node:*, @megabottron1999/*, zod and @inventorybottron/grammar (CLAUDE.md).',
+};
+
+/** Nothing here plays: no module imports MegaBotTron1999's actors. */
+const ACTOR_IMPORTS = {
+  regex: '^@megabottron1999/turns/turn-actor\\.ts$',
+  message: 'InventoryBotTron automates no play: it imports no actor.',
+};
+
 const TESTS = ['**/*.test.ts'];
 
 /** The rule with the given patterns, `../` always among them. */
@@ -34,8 +52,9 @@ const restrict = (...patterns) => ({
 });
 
 export default tseslint.config(
-  // Coverage reports, git-ignored: the flat config does not read .gitignore.
-  { ignores: ['coverage/'] },
+  // Coverage reports, git-ignored (the flat config does not read .gitignore), and
+  // MegaBotTron1999, vendored as a submodule and linted by its own repository.
+  { ignores: ['coverage/', 'vendor/'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {
@@ -73,5 +92,16 @@ export default tseslint.config(
     files: ['packages/*/src/**/*.ts'],
     ignores: TESTS,
     rules: restrict(TEST_IMPORTS, FOREIGN_IMPORTS),
+  },
+  // The modules' production code: no test helpers, no actor, nothing outside §7.1's list.
+  {
+    files: ['modules/*/src/**/*.ts'],
+    ignores: TESTS,
+    rules: restrict(TEST_IMPORTS, ACTOR_IMPORTS, MODULE_FOREIGN_IMPORTS),
+  },
+  // Their tests and helpers: the same, but the helpers and Vitest.
+  {
+    files: ['modules/*/src/**/*.test.ts', 'modules/*/test/**/*.ts'],
+    rules: restrict(ACTOR_IMPORTS, MODULE_FOREIGN_IMPORTS),
   }
 );
