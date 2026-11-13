@@ -100,6 +100,11 @@ describe('the inventorybot-state node', () => {
     await run.bot(`@${OWNER}, ${S2}un sasso [C]!`);
     expect(held(run)).toEqual({ 'un sasso': 2, [STECCO]: 1 });
     expect(run.read('get', { path: 'drops.pending' })).toEqual([]);
+    // Announced with the event that resolved it, as every live change is.
+    expect(run.of('inventorybot-state.changed').at(-1)).toMatchObject({
+      sections: ['owner', 'inventory', 'items', 'drops'],
+      event: { type: 'inventorybot.turn', t: T0 + 20 * MIN },
+    });
     expect(run.read('get', { path: 'drops.latest' })).toMatchObject([
       { item: STECCO, sure: true },
       { item: 'un sasso', sure: true },
