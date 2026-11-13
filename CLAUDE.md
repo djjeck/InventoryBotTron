@@ -186,8 +186,11 @@ owned, a place, a Pakkomon), `reply` being the grammar's event read with the own
 there (`query`, if within the turn parser's answer window), which it answers; one read from a
 message played back (missed while the instance was down, past the connector's grace:
 MegaBotTron1999's D83) carries `playback: true`, as the turns do, so that a state applies it and
-announces nothing of it (since 0.4.0). The group's replies stay the turns'. The `/esporta` file is
-not read live: the account gives the caption only.
+announces nothing of it (since 0.4.0). The group's replies stay the turns'. The `/esporta` reply is
+read from the text file its message carries (MegaBotTron1999's `Inbound.document`, D82, the turn
+parser's `BotMessage.document`), since 0.4.1: a whole listing for the state, and its items learned
+as an inventory's; a file that came without its text (`skipped`) leaves the caption alone, which
+tells nothing, and is logged with why.
 
 - **The `inventorybot-state` plugin** (`src/plugins/inventorybot-state.ts`, its own plugin entry,
   since 0.3.0): the owner's player state, MegaBotTron1999's `statePlugin` (its docs/bot-os-api.md

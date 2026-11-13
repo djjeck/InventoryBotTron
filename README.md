@@ -54,11 +54,11 @@ Its config is `pin` alone, the paths of the state its panel draws first, the fir
 line on its card; without one it pins `inventory.held` (how many items the owner holds) and
 `drops.latest` (the latest drops). A fresh node reads the whole event log, so it starts from every
 drop and reply the parser has published. The inventory is exact after a whole `/inventario` (or
-`/collezioni`) in the private chat, and each section's freshness says how far it is from its last
-whole listing: a drop or a use is a change known exactly, a drop whose item the parser guessed an
-uncertain one, counted under its guess until a later reply teaches the item. Other nodes read it
-through its interface: `state.get({ path })`, `state.freshness({ section })`,
-`state.count({ name })` and `state.held()`.
+`/collezioni`) in the private chat, or an `/esporta`, whose file the parser reads live, and each
+section's freshness says how far it is from its last whole listing: a drop or a use is a change
+known exactly, a drop whose item the parser guessed an uncertain one, counted under its guess until
+a later reply teaches the item. Other nodes read it through its interface: `state.get({ path })`,
+`state.freshness({ section })`, `state.count({ name })` and `state.held()`.
 
 ## Seeding the parser
 

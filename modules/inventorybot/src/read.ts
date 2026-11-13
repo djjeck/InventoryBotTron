@@ -15,6 +15,10 @@
  * - Its cooldown names nobody: read in the private chat only, with its wait.
  * - Whatever else it says to the owner is no adventure's.
  *
+ * - Its `/esporta` reply is a text file, every item the owner holds, under a caption that names
+ *   them (docs/bot-protocol.md §6.8): read with its file, which MegaBotTron1999's Telegram
+ *   connectors download (its D82), as a whole listing; without it, the caption tells nothing.
+ *
  * The bot writes some accented letters decomposed, so the text is read in its composed form (NFC),
  * and the items are kept in it.
  */
@@ -52,19 +56,30 @@ export function listedItems(ev: Event): string[] {
   }
 }
 
+/** A reply's text file as the grammar reads it: composed (NFC), its Windows line ends as `\n`. */
+function fileText(file: string | null | undefined): string | null {
+  return file === undefined || file === null
+    ? null
+    : file.normalize('NFC').replace(/\r\n?/gu, '\n');
+}
+
 /**
  * The reply as the grammar reads it: in its composed form, trimmed, and an addressed one with its
  * "[W] " and the addressee's title taken off; with the addressee, and whether it is the lucky
- * adventure's.
+ * adventure's. `file` is the text file the message carries, if any (the `/esporta` file).
  */
-export function readReply(text: string): { ev: Event; to?: string; lucky: boolean } {
+export function readReply(
+  text: string,
+  file?: string | null
+): { ev: Event; to?: string; lucky: boolean } {
   const composed = text.normalize('NFC').trim();
   const lucky = LUCKY.exec(composed);
   const addressed = lucky === null ? ADDRESSED.exec(composed) : null;
   const to = lucky?.[1] ?? addressed?.[1];
   const ev = classify(
     addressed === null ? composed : `@${addressed[1]}, ${composed.slice(addressed[0].length)}`,
-    null
+    null,
+    fileText(file)
   );
   return { ev, ...(to === undefined ? {} : { to }), lucky: lucky !== null };
 }
@@ -85,7 +100,7 @@ export function learnFrom(ev: Event, known: InventoryKnowledge): { item: string;
  * message claimed and unread, or nothing. Whatever it reads teaches `known`.
  */
 export function readInventoryBot(m: BotMessage, known: InventoryKnowledge): TurnReading {
-  const { ev, to, lucky } = readReply(m.text);
+  const { ev, to, lucky } = readReply(m.text, m.document?.text);
   const mine = to !== undefined && to.toLowerCase() === m.self?.toLowerCase();
   const gain = learnFrom(ev, known);
   if (ev.type === 'drop' && to !== undefined) {
@@ -146,16 +161,22 @@ export const STATE_REPLIES: ReadonlySet<EventType> = new Set<EventType>([
 
 /**
  * A reply of the bot's in the private chat, read with the command it answers (`query`, the owner's
- * last command there, or null), if it is one the player state reads (`STATE_REPLIES`): a refusal
- * only when it states a count (`/dai`'s "ne possiedi solo N").
+ * last command there, or null) and the text file it carries (`file`, the `/esporta` file), if it is
+ * one the player state reads (`STATE_REPLIES`): a refusal only when it states a count (`/dai`'s "ne
+ * possiedi solo N"). The `/esporta` caption without its file tells nothing.
  */
-export function readStateReply(text: string, query: string | null): Event | undefined {
+export function readStateReply(
+  text: string,
+  query: string | null,
+  file?: string | null
+): Event | undefined {
   const composed = text.normalize('NFC').trim();
+  const content = fileText(file);
   // As written; else with a title after the addressee taken off.
-  let ev = classify(composed, query);
+  let ev = classify(composed, query, content);
   const addressed = ADDRESSED.exec(composed);
   if (ev.type === 'unknown' && addressed !== null)
-    ev = classify(`@${addressed[1]}, ${composed.slice(addressed[0].length)}`, query);
+    ev = classify(`@${addressed[1]}, ${composed.slice(addressed[0].length)}`, query, content);
   if (!STATE_REPLIES.has(ev.type)) return undefined;
   if (ev.type === 'miss' && ev.owned === undefined) return undefined;
   return ev;

@@ -11,10 +11,12 @@
  * - In private, every reply the player state reads besides (an inventory, an item's card, a
  *   recipe, a craft, a `/mostra`, a use, a gift or a give, a place, a Pakkomon): published as
  *   `inventorybot.reply`, the grammar's event read with the owner's last command there, which it
- *   answers (since 0.2.0), marked `playback: true` when read from a message played back (since
- *   0.4.0), as the turn parser marks its turns: a state applies it and announces nothing of it. A
- *   turn's `gain` carries its drop's narrative (`raw`), with which a
- *   reader resolves a guess again.
+ *   answers (since 0.2.0). The `/esporta` reply is read from the file its message carries, as a
+ *   whole listing (since 0.4.1); its caption alone tells nothing, and a file that came without its
+ *   text is logged with why. A reply read from a message played back is marked `playback: true`
+ *   (since 0.4.0), as the turn parser marks its turns: a state applies it and announces nothing of
+ *   it. A turn's `gain` carries its drop's narrative (`raw`), with which a reader resolves a guess
+ *   again.
  *
  * Each instance keeps what it learns (items and drops' sentences) in its own store
  * (`src/knowledge.ts`), so the base parser is made per instance, with its knowledge, rather than
@@ -100,7 +102,13 @@ export const inventorybotPlugin: Plugin = {
       const command = last.get(m.chat);
       const query =
         command !== undefined && m.time - command.t <= ANSWER_WINDOW_MS ? command.text : null;
-      const reply = readStateReply(m.text, query);
+      // The file it carries (the /esporta file), or why the connector left its text out.
+      const doc = m.document;
+      if (doc?.skipped !== undefined)
+        ctx.log.warn(
+          `a file of the bot's (${doc.name || 'unnamed'}, ${doc.mime || 'no type'}, ${doc.size} bytes) came without its text (${doc.skipped}): its caption alone is read`
+        );
+      const reply = readStateReply(m.text, query, doc?.text);
       if (reply === undefined) return;
       const self = chat.self();
       ctx.bus.publish(

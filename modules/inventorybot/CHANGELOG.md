@@ -3,6 +3,16 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.4.1 (2026-11-13)
+
+- **The `/esporta` file is read live.** MegaBotTron1999 0.1.7's Telegram connectors download a
+  message's text file (`Inbound.document`, its D82), so the parser reads the export beside its
+  caption: published as `inventorybot.reply`, an `inventory` event with `exported: true`, every item
+  the owner holds, which the player state takes as a whole listing; and its items learned, as an
+  inventory's. A file that came without its text (too large, not text, not UTF-8, a failed download)
+  leaves the caption alone, which tells nothing, as before, and is logged with why. No change to the
+  events' shapes.
+
 ## 0.4.0 (2026-11-13)
 
 - **`inventorybot.reply` marks history**: a reply read from a message played back (missed while the
@@ -31,7 +41,8 @@ interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versio
   item's card, a recipe and the recipe list, a craft, a `/mostra`, a use, a gift, a give, a `/dai`
   refused with the count owned), a place reached or shown, and their Pakkomon's records and fights,
   as the grammar reads it (`reply`) with the owner's last command there (`query`), for the player
-  state. The `/esporta` file is not among them: the account gives its caption only.
+  state. The `/esporta` file is not among them: the account gives its caption only (read since
+  0.4.1).
 - **A gain carries its drop's narrative**, `raw` (optional; none for the lucky adventure), from
   which a reader resolves a guess again once it knows more. Nothing else of `inventorybot.turn`
   changes: a node that reads it ignores the field.

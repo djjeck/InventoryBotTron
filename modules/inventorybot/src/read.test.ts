@@ -67,6 +67,25 @@ describe('readInventoryBot', () => {
     );
   });
 
+  it('learns the items of the /esporta file the message carries, and claims nothing of it', () => {
+    const k = knowledge();
+    const caption = 'Inventario di @mario_r, al 2026/11/06 12:00:00';
+    const document = { name: 'file.txt', mime: 'text/plain', size: 40 };
+    const file = { ...document, text: '1x\tuna perla\t[C]\r\n3x\tun sasso\t[C]\r\n' };
+    // Without its text, the caption teaches nothing.
+    readInventoryBot(
+      msg(caption, { private: true, document: { ...document, skipped: 'size' } }),
+      k
+    );
+    expect(readInventoryBot(msg(`@mario_r, ${S}una perla [C]!`), k)).toMatchObject({
+      outcome: { sure: false },
+    });
+    expect(readInventoryBot(msg(caption, { private: true, document: file }), k)).toBeUndefined();
+    expect(readInventoryBot(msg(`@mario_r, ${S}un sasso [C]!`), k)).toMatchObject(
+      gain('un sasso', 'C')
+    );
+  });
+
   it('reads the lucky adventure, learning its prize, and keeps one it cannot read as unread', () => {
     const lucky = "Complimenti @mario_r, questa e' l'avventura FORTUNATA del giorno! Hai vinto: ";
     const k = knowledge();
@@ -161,6 +180,28 @@ describe('readStateReply', () => {
       type: 'miss',
       owned: 2,
     });
+  });
+
+  it('reads the /esporta file as a whole listing, and its caption alone as nothing', () => {
+    const caption = 'Inventario di @mario_r, al 2026/11/06 12:00:00';
+    const file = '2x\tuna perla\t[C]\r\n1x\tun dado di legno\t[R] [usabile]\r\n';
+    expect(readStateReply(caption, '/esporta', file)).toEqual({
+      type: 'inventory',
+      filtered: false,
+      truncated: false,
+      exported: true,
+      items: [
+        { name: 'una perla', rarity: 'C', usable: false, qty: 2 },
+        { name: 'un dado di legno', rarity: 'R', usable: true, qty: 1 },
+      ],
+    });
+    // Decomposed letters are read composed, as the caption is.
+    const decomposed = 'un caffè ristretto'.normalize('NFD');
+    expect(readStateReply(caption, '/esporta', `1x\t${decomposed}\t[C]\r\n`)).toMatchObject({
+      items: [{ name: 'un caffè ristretto' }],
+    });
+    expect(readStateReply(caption, '/esporta')).toBeUndefined();
+    expect(readStateReply(caption, '/esporta', null)).toBeUndefined();
   });
 
   it('not the turns, refusals without a count, nor what it cannot read', () => {

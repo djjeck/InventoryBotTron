@@ -9,13 +9,12 @@
  * send to their instance (README, "Seeding the parser"). The exports, and the seed made of them,
  * never enter a repository (CLAUDE.md, "Game content"). Exit codes: 0 done, 2 wrong arguments.
  */
-import { classify } from '@inventorybottron/grammar';
 import {
   InventoryKnowledge,
   type KnowledgeStore,
   type Seed,
 } from '@inventorybottron/inventorybot/knowledge.ts';
-import { learnFrom, listedItems, readReply } from '@inventorybottron/inventorybot/read.ts';
+import { learnFrom, readReply } from '@inventorybottron/inventorybot/read.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,15 +48,13 @@ export function seedFrom(messages: Iterable<BotMessage & { fileText?: string }>)
   let sure = 0;
   for (const m of messages) {
     count++;
-    const { ev } = readReply(m.text);
+    // The /esporta file, every item the player owns, is read beside its caption, as live.
+    const { ev } = readReply(m.text, m.fileText);
     const learned = learnFrom(ev, known);
     if (ev.type === 'drop') {
       drops++;
       if (learned.sure) sure++;
     }
-    // The /esporta file, every item the player owns, beside its caption.
-    if (m.fileText !== undefined)
-      known.learnItems(listedItems(classify(m.text.normalize('NFC').trim(), null, m.fileText)));
   }
   return { seed: known.snapshot(), messages: count, drops, sure };
 }

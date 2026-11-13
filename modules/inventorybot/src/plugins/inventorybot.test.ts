@@ -147,6 +147,31 @@ describe('the inventorybot parser', () => {
     expect(p.replies[0]?.['self']).toBe(OWNER);
   });
 
+  it('reads the /esporta file its message carries, and logs one that came without its text', async () => {
+    const p = await runParser();
+    const caption = `Inventario di @${OWNER}, al 2026/11/06 12:00:00`;
+    const document = { name: 'file.txt', mime: 'text/plain', size: 30 };
+    p.owner('/esporta');
+    p.bot(caption, { chat: DM, document: { ...document, skipped: 'size' } });
+    p.bot(caption, { chat: DM, document: { ...document, text: '2x\tuna perla\t[C]\r\n' } });
+    p.bot(caption, { chat: DM });
+    expect(p.replies.map((e) => e['reply'])).toEqual([
+      {
+        type: 'inventory',
+        filtered: false,
+        truncated: false,
+        exported: true,
+        items: [{ name: 'una perla', rarity: 'C', usable: false, qty: 2 }],
+      },
+    ]);
+    expect(p.lines.filter((l) => l.includes('without its text'))).toEqual([
+      expect.stringContaining('file.txt, text/plain, 30 bytes) came without its text (size)'),
+    ]);
+    // What the file listed is known: a drop that ends with it is sure.
+    p.bot(`@${OWNER}, ${S}una perla [C]!`, { chat: DM });
+    expect(p.outcomes()).toMatchObject([{ item: 'una perla', sure: true }]);
+  });
+
   it('marks a reply read from a message played back, as the turns are marked', async () => {
     const p = await runParser();
     p.owner('/inventario', { playback: true });

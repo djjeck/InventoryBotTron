@@ -26,6 +26,7 @@ export async function runParser(documents?: Record<string, unknown>) {
   const account = new FakeConnector({ account: `telegram:${OWNER}` });
   const events: BusEvent[] = [];
   const replies: BusEvent[] = [];
+  const lines: string[] = [];
   const kit = new DevKit({
     start: T0,
     plugins: [fakeConnectorPlugin(TELEGRAM_USER, account), plugin],
@@ -36,6 +37,7 @@ export async function runParser(documents?: Record<string, unknown>) {
         e.to !== `${id}.chat` ? e : { ...e, reads: [...(e.reads as string[]), GROUP] }
       ),
     }),
+    print: (line) => void lines.push(line),
     record: (r) => {
       if (r.type.endsWith('.turn')) events.push(r as BusEvent);
       if (r.type.endsWith('.reply')) replies.push(r as BusEvent);
@@ -64,5 +66,5 @@ export async function runParser(documents?: Record<string, unknown>) {
   /** A command of the owner's, in private unless it says otherwise. */
   const owner = (text: string, m: Partial<Heard> = {}): void =>
     account.hear({ chat: DM, sender: OWNER, own: true, time: kit.clock.now(), text, ...m });
-  return { kit, account, bot, owner, read, act, events, replies, outcomes, drift };
+  return { kit, account, bot, owner, read, act, events, replies, lines, outcomes, drift };
 }
