@@ -16,6 +16,12 @@
  * - **Its config:** `pin`, by default `inventory.held` (how many items the owner holds) and
  *   `drops.latest` (the latest drops), the line of its card.
  *
+ * - **What happened** (since 0.5.0): `inventorybot-state.gained`, one per item the owner gained
+ *   (a drop, sure or guessed, a gift, a give to them not counted by its notice, a craft's output,
+ *   what a `/usa` gave), `{ item, sure, qty, exact }`, told live only (`src/gains.ts`). A state
+ *   plugin offers rich domain events, so that the owner writes a small script on the fly ("when I
+ *   find X, …") instead of comparing states.
+ *
  * It never sends, and announces each change as `inventorybot-state.changed`, the sections changed;
  * an event its reducer refuses is recorded as `inventorybot-state.refused`.
  */
@@ -23,6 +29,7 @@ import { initialState, reduce, type State } from '@inventorybottron/state';
 import { type Plugin } from '@megabottron1999/core';
 import { statePlugin } from '@megabottron1999/turns/state-plugin.ts';
 import { z } from 'zod';
+import { gainedSchema, gains } from '#src/gains.ts';
 import {
   CONSUMES,
   freshness,
@@ -58,6 +65,8 @@ const base = statePlugin<Kept>({
     return reduce(owned, e) as Kept;
   },
   freshness,
+  events: { gained: gainedSchema },
+  announce: gains,
   queries: {
     count: {
       help: 'How many of an item the owner holds, as the state estimates it',

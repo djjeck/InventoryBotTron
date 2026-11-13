@@ -3,6 +3,19 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.5.0 (2026-11-13)
+
+- **A new event, `inventorybot-state.gained`** (`{ item, sure, qty, exact }`): the state plugin
+  tells each item the owner gains, one event per item, through MegaBotTron1999 0.1.7's
+  `StateSpec.events` and `announce` (its D83), so that a script reacts to an item gained without
+  comparing states. `qty` and `exact` are the item's holding after the gain; for a guessed drop
+  `sure` is false and `item` the guess. A gain: an adventure drop, sure or guessed, a lucky drop, a
+  gift, another player's give not already counted by its notice, a craft's output, each item a
+  `/usa` adds. Not a gain: a listing, `/esamina`, `/mostra`, `/ricetta`, a `/dai` refused with the
+  count owned, the lottery, a Pakkomon fight; a guess resolved later is not told again. Told live
+  only: never for what the node catches up on at start, nor for a played-back message's event.
+  `inventorybot-state.changed` is unchanged.
+
 ## 0.4.2 (2026-11-13)
 
 - It imports the player state `^0.1.1`, in which a whole inventory (now the `/esporta` file too)

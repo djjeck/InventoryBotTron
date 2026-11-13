@@ -29,7 +29,10 @@ describe('the inventorybot-state node', () => {
     expect(m.id).toBe('inventorybot-state');
     expect(m.kinds).toEqual(['stats']);
     expect(m.inputs).toMatchObject({ events: { type: 'events', namespace: 'inventorybot' } });
-    expect(Object.keys(m.events ?? {})).toEqual(['inventorybot-state.changed']);
+    expect(Object.keys(m.events ?? {})).toEqual([
+      'inventorybot-state.changed',
+      'inventorybot-state.gained',
+    ]);
     expect(Object.keys(m.interface.state ?? {})).toEqual(['get', 'freshness', 'count', 'held']);
     expect(m.config?.parse({})).toEqual({ pin: ['inventory.held', 'drops.latest'] });
     const run = await bootState(dir);
@@ -113,6 +116,50 @@ describe('the inventorybot-state node', () => {
       first_seen: '2026-11-06T12:00:00+00:00',
     });
     await run.core.stop();
+  });
+
+  it('tells each item gained live, and nothing of history', async () => {
+    const run = await bootState(dir);
+    await run.owner('/inventario');
+    await run.bot(`@${OWNER}, possiedi:\n- un sasso [C] x2`);
+    // A drop of a known item, a guess, and a gift.
+    await run.bot(`@${OWNER}, ${S}un sasso [C]!`);
+    run.clock.advance(MIN);
+    await run.bot(`@${OWNER}, ${S2}${STECCO} [N]!`);
+    await run.bot('[N] @lucia_b ti ha dato 2x una perla');
+    // Not a gain: a /mostra, though it raises the estimate.
+    await run.owner('/mostra perla');
+    await run.bot(`@${OWNER}, mostri orgogliosamente di possedere 3x una perla [R]`);
+    // Played back: applied, told to nobody.
+    await run.bot('[N] @lucia_b ti ha dato 1x una conchiglia', { playback: true });
+    const gained = run.of('inventorybot-state.gained');
+    expect(gained.map((g) => [g['item'], g['sure'], g['qty'], g['exact']])).toEqual([
+      ['un sasso', true, 3, true],
+      ['un ghiacciolo', false, 1, false],
+      ['una perla', true, 2, false],
+    ]);
+    expect(gained.map((g) => g.t)).toEqual([T0, T0 + MIN, T0 + MIN]);
+    expect(held(run)).toMatchObject({ 'una perla': 3, 'una conchiglia': 1 });
+    await run.core.stop();
+    // The catch-up at start applies what it missed and tells nothing of it.
+    run.log.write({
+      type: 'inventorybot.turn',
+      t: T0 + 2 * MIN,
+      instance: 'inventorybot',
+      chat: DM,
+      outcome: {
+        kind: 'gain',
+        bot: 'InventoryBot',
+        item: 'un sasso',
+        rarity: 'C',
+        tags: [],
+        sure: true,
+      },
+    });
+    const again = await bootState(dir, { at: T0 + 10 * MIN });
+    expect(held(again)).toMatchObject({ 'un sasso': 4 });
+    expect(again.of('inventorybot-state.gained')).toEqual([]);
+    await again.core.stop();
   });
 
   it('resumes from its cursor after a restart, each event applied once', async () => {

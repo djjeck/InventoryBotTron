@@ -202,10 +202,25 @@ tells nothing, and is logged with why.
   command's argument among the items held or seen and the recipes listed or made; its zod schema
   (`stateSchema`, the package's `State`); and the freshness: a whole listing a `snapshot` of
   `inventory`, a guess `uncertain`, any other change a `delta`. Its interface adds `count` and
-  `held`; its config's `pin` defaults to `inventory.held` and `drops.latest`. It announces
-  `inventorybot-state.changed` only: `statePlugin` publishes no other event, and its payload is
-  fixed, so what a pending drop's resolution corrected is not announced beyond the sections it
-  changed.
+  `held`; its config's `pin` defaults to `inventory.held` and `drops.latest`. It announces each
+  change as `inventorybot-state.changed` (the sections changed, `statePlugin`'s), and, since 0.5.0,
+  what happened in its own event, `inventorybot-state.gained` (below).
+- **State plugins offer rich domain events.** A state tells what an event did in the game's own
+  terms (an item gained), not only which sections changed, so that the owner writes a small script
+  on the fly ("when I find X, …") on its events instead of comparing states. Each is declared in the
+  spec (`events`, `<id>.<name>` in the manifest) and made by a pure function of the state before and
+  after and the event (`announce`), told live only: never for an event refused, read at start from
+  the log, or played back (MegaBotTron1999's D83). A new event of the kind is a minor version.
+- **`inventorybot-state.gained`** (`src/gains.ts`, `gains(before, after, event)`):
+  `{ item: string, sure: boolean, qty: number, exact: boolean }`, one per item the owner gained by
+  an event, `qty` and `exact` the item's holding after it (`after.inventory.items[item]`; 0 and
+  false if the state holds none), `item` the guess when `sure` is false. **A gain:** an adventure
+  drop, sure or guessed, and a lucky drop; a gift; another player's give to the owner, only when its
+  private notice did not already count it (`notified`; the parser reads the private chat only, so it
+  comes as the notice, a gift); a craft's output; each item a `/usa` adds (a positive count among
+  its items). **Not a gain:** a listing, an `/esamina`, a `/mostra`, a `/ricetta`, a `/dai` refused
+  with the count owned (observations, even when they raise an estimate), the lottery, a Pakkomon
+  fight. A guess resolved later moves the count to its item, and is told no second time.
 - `src/read.ts` reads a message with the grammar: whose reply it is, a gain or a cooldown, and what
   it teaches; `src/knowledge.ts` is what the instance knows, kept in its store's `knowledge`
   document (at most 5000 items, 1000 prefixes and the latest 200 unknown drops); `src/drop-cut.ts`

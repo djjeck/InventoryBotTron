@@ -60,6 +60,17 @@ known exactly, a drop whose item the parser guessed an uncertain one, counted un
 a later reply teaches the item. Other nodes read it through its interface: `state.get({ path })`,
 `state.freshness({ section })`, `state.count({ name })` and `state.held()`.
 
+It also tells what happened, so that a small script reacts to the game without comparing states:
+`inventorybot-state.gained`, `{ item, sure, qty, exact }`, one per item the owner gains (an
+adventure drop, sure or guessed, the lucky adventure's prize, a gift, a craft's output, what a
+`/usa` gives), with how many of it they hold after and whether that count is exact; for a drop whose
+item the parser guessed, `sure` is false and `item` is the guess. A listing, an `/esamina`, a
+`/mostra`, a `/ricetta` or a `/dai` only observes the inventory and gains nothing, and neither does
+the lottery or a Pakkomon fight; a guess resolved later is not told again. It is news only: nothing
+is told of what the node catches up on at start, nor of a message the account caught up on after
+downtime. Bind a script node's events input to the `inventorybot-state` node's events output (the
+namespace `inventorybot-state`) and react to `inventorybot-state.gained`.
+
 ## Seeding the parser
 
 The `inventorybot` node starts knowing nothing of the game, and is sure of a drop's item only once
