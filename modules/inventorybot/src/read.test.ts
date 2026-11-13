@@ -162,7 +162,7 @@ describe('listedItems', () => {
 });
 
 describe('readStateReply', () => {
-  it('reads the replies the player state reads, with their command', () => {
+  it('reads the replies of the kinds it publishes, with their command', () => {
     expect(
       readStateReply('@mario_r, possiedi:\n- una perla [C] x2', '/inventario C')
     ).toMatchObject({
@@ -179,6 +179,11 @@ describe('readStateReply', () => {
     ).toMatchObject({
       type: 'miss',
       owned: 2,
+    });
+    // A refusal without a count, and an item's cooldown, are published too.
+    expect(readStateReply('@mario_r, non hai niente del genere', '/mostra x')).toMatchObject({
+      type: 'miss',
+      reply: 'item_not_owned',
     });
   });
 
@@ -204,9 +209,14 @@ describe('readStateReply', () => {
     expect(readStateReply(caption, '/esporta', null)).toBeUndefined();
   });
 
-  it('not the turns, refusals without a count, nor what it cannot read', () => {
+  it('not the turns, the cooldown, nor what it cannot read', () => {
     expect(readStateReply(`@mario_r, ${S}una perla [C]!`, '/avventura')).toBeUndefined();
-    expect(readStateReply('@mario_r, non hai niente del genere', '/mostra x')).toBeUndefined();
+    expect(
+      readStateReply(
+        'Troppo presto, devi riposare ancora per 3 minuti prima di poterti avventurare di nuovo.',
+        '/avventura'
+      )
+    ).toBeUndefined();
     expect(readStateReply('Boh', null)).toBeUndefined();
   });
 });

@@ -26,7 +26,11 @@ Install the three, and restart. A module that imports `@inventorybot-wiki/gramma
 `@inventorybottron/grammar` first ([its changelog](packages/grammar/CHANGELOG.md)).
 
 The `inventorybot` node reads the owner's own Telegram account (`telegram-user`): its edge reads the
-private chat with the bot, and the game's group if the owner plays there.
+private chat with the bot, and the game's group if the owner plays there. It publishes the owner's
+adventures as `inventorybot.turn`, and each private reply as an event of its kind
+(`inventorybot.inventory`, `inventorybot.craft`, `inventorybot.itemInfo`, …): every event, its
+fields, and the bot's replies that refuse a command are in the module's
+[README](modules/inventorybot/README.md).
 
 ## The player state
 

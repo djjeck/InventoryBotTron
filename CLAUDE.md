@@ -180,27 +180,36 @@ shape in `src/turn.ts`), with the contract `state.rest` and `actions.sent` a tur
 came from RegnoTron's `game-bots` module with the same plugin id, event and store, so a graph's node
 keeps running on its instance ([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome
 carries its drop's narrative (`raw`, optional, since 0.2.0), the rest of the outcome's shape
-unchanged for the nodes that read the turns of several games. Besides the turns, it publishes as
-`inventorybot.reply` (`{ chat, query, self?, reply, playback? }`) each reply of the bot's in the
-private chat that the player state reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's
-card, a recipe, a craft, a `/mostra`, a use, a gift or a give, a `/dai` refused with the count
-owned, a place, a Pakkomon), `reply` being the grammar's event read with the owner's last command
-there (`query`, if within the turn parser's answer window), which it answers; one read from a
-message played back (missed while the instance was down, past the connector's grace:
-MegaBotTron1999's D83) carries `playback: true`, as the turns do, so that a state applies it and
-announces nothing of it (since 0.4.0). The group's replies stay the turns'. The `/esporta` reply is
-read from the text file its message carries (MegaBotTron1999's `Inbound.document`, D82, the turn
-parser's `BotMessage.document`), since 0.4.1: a whole listing for the state, and its items learned
-as an inventory's; a file that came without its text (`skipped`) leaves the caption alone, which
-tells nothing, and is logged with why.
+unchanged for the nodes that read the turns of several games. Besides the turns, since 0.6.0, it
+publishes each reply of the bot's in the private chat of a kind it knows (`src/replies.ts`: a
+listing, an item's card, a recipe and the recipe list, a craft, a `/mostra`, a use, a gift or a
+give, a place, a refused `/viaggio`, an item's cooldown, a Pakkomon, and the bot's fixed replies,
+`miss`) as its own event type, `inventorybot.<kind>` (the grammar's type in camel case:
+`inventorybot.itemInfo`), each declared with its own schema so that the editor and a script's types
+know its fields: `{ chat, query, self?, playback?, ...the grammar's fields }`, `query` the owner's
+last command there (if within the turn parser's answer window), which it answers; `REPLY_KINDS`
+lists them, and a type check holds each schema to the grammar's event. One read from a message
+played back (missed while the instance was down, past the connector's grace: MegaBotTron1999's D83)
+carries `playback: true`, as the turns do, so that a state applies it and announces nothing of it.
+Only the private chat's replies are published, so every one is the owner's; the group's replies stay
+the turns'. The drops and the adventure's cooldown are the turns' alone, never also a reply's event.
+Until 0.6.0 the replies the state read were one event, `inventorybot.reply`, with the grammar's
+event inside. The `/esporta` reply is read from the text file its message carries (MegaBotTron1999's
+`Inbound.document`, D82, the turn parser's `BotMessage.document`), since 0.4.1: a whole listing for
+the state, and its items learned as an inventory's; a file that came without its text (`skipped`)
+leaves the caption alone, which tells nothing, and is logged with why. The module's
+[README](modules/inventorybot/README.md) is its event surface: every event and its fields, and the
+catalogue of the bot's replies that refuse a command (their reason, and whether the grammar
+recognises each), for MegaBotTron1999's coming command answers (its issue #59).
 
 - **The `inventorybot-state` plugin** (`src/plugins/inventorybot-state.ts`, its own plugin entry,
   since 0.3.0): the owner's player state, MegaBotTron1999's `statePlugin` (its docs/bot-os-api.md
   §5, bot-os.md D72) over the state package's `reduce`. `src/state.ts` reads the parser's events as
   the state's: a turn's gain as a drop (a guess, `sure: false`, kept pending with its `raw`), a
   reply as the owner's event, a `/usa`'s item and a craft's recipe found by the words of the
-  command's argument among the items held or seen and the recipes listed or made; its zod schema
-  (`stateSchema`, the package's `State`); and the freshness: a whole listing a `snapshot` of
+  command's argument among the items held or seen and the recipes listed or made (its `events` input
+  stays bound to the parser's namespace, so the per-kind events reach it on the same edge); its zod
+  schema (`stateSchema`, the package's `State`); and the freshness: a whole listing a `snapshot` of
   `inventory`, a guess `uncertain`, any other change a `delta`. Its interface adds `count` and
   `held`; its config's `pin` defaults to `inventory.held` and `drops.latest`. It announces each
   change as `inventorybot-state.changed` (the sections changed, `statePlugin`'s), and, since 0.5.0,

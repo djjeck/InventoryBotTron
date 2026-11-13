@@ -40,7 +40,7 @@ export async function runParser(documents?: Record<string, unknown>) {
     print: (line) => void lines.push(line),
     record: (r) => {
       if (r.type.endsWith('.turn')) events.push(r as BusEvent);
-      if (r.type.endsWith('.reply')) replies.push(r as BusEvent);
+      else if (r.type.startsWith(`${id}.`)) replies.push(r as BusEvent);
     },
   });
   await kit.start();

@@ -1,6 +1,7 @@
 import { apply, initialState, type State } from '@inventorybottron/state';
 import { type BusEvent } from '@megabottron1999/core';
 import { describe, expect, it } from 'vitest';
+import { replyBus } from '#test/events.ts';
 import { freshness, stateSchema, toStateEvent } from './state.ts';
 
 const T0 = Date.parse('2026-11-06T12:00:00Z');
@@ -9,14 +10,7 @@ const AT = '2026-11-06T12:00:00+00:00';
 const turn = (outcome: Record<string, unknown>): BusEvent =>
   ({ type: 'inventorybot.turn', t: T0, chat: '@InventoryBot', outcome }) as BusEvent;
 const reply = (r: Record<string, unknown>, query: string | null, self?: string): BusEvent =>
-  ({
-    type: 'inventorybot.reply',
-    t: T0,
-    chat: '@InventoryBot',
-    query,
-    ...(self === undefined ? {} : { self }),
-    reply: r,
-  }) as BusEvent;
+  replyBus(r, query, { ...(self === undefined ? {} : { self }), playback: true });
 const gain = (more: Record<string, unknown> = {}) =>
   turn({
     kind: 'gain',
@@ -67,6 +61,7 @@ describe("the parser's events, as the state's", () => {
     expect(toStateEvent(s, turn({ kind: 'nothing', reason: 'cooldown' }))).toBeUndefined();
     expect(toStateEvent(s, { type: 'inventorybot.turn', t: T0 } as BusEvent)).toBeUndefined();
     expect(toStateEvent(s, { type: 'inventorybot.other', t: T0 } as BusEvent)).toBeUndefined();
+    expect(toStateEvent(s, { type: 'other.inventory', t: T0 } as BusEvent)).toBeUndefined();
   });
 
   it('a_reply_is_the_owners_its_use_and_recipe_found_by_the_words_of_its_command', () => {
@@ -107,6 +102,25 @@ describe("the parser's events, as the state's", () => {
     expect(toStateEvent(initialState(), reply(craft, '/ricetta torre'))).not.toHaveProperty(
       'recipe'
     );
+  });
+
+  it('a_reply_of_each_kind_is_its_grammar_event_without_the_bus_or_the_context', () => {
+    const items = [{ name: 'un sasso', rarity: 'C', usable: false, qty: 2 }];
+    const inventory = { type: 'inventory', filtered: false, truncated: false, items };
+    expect(toStateEvent(initialState(), reply(inventory, '/inventario', 'mario_r'))).toEqual({
+      ...inventory,
+      dm: true,
+      date: AT,
+      query: '/inventario',
+      player: 'mario_r',
+    });
+    const miss = { type: 'miss', reply: 'dai_not_enough', command: '/dai', owned: 2 };
+    expect(toStateEvent(initialState(), reply(miss, '/dai lucia_b 3 sasso'))).toEqual({
+      ...miss,
+      dm: true,
+      date: AT,
+      query: '/dai lucia_b 3 sasso',
+    });
   });
 
   it('the_schema_takes_every_state', () => {

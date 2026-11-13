@@ -5,8 +5,9 @@
  * `src/state.ts` reads them.
  *
  * - **Its input:** `events`, required, bound to the `inventorybot` parser's events output (the
- *   namespace `inventorybot`): `inventorybot.turn` (the drops) and `inventorybot.reply` (the
- *   private replies that list, show or move the owner's items).
+ *   namespace `inventorybot`): `inventorybot.turn` (the drops) and each kind of private reply,
+ *   `inventorybot.<kind>` (`src/replies.ts`: the listings, cards, recipes, crafts, uses, gifts and
+ *   gives, places and Pakkomon), since 0.6.0.
  * - **Freshness:** a whole listing is a `snapshot` of the inventory; a drop, a use, a craft or any
  *   other change a `delta`; a drop the parser is not sure of `uncertain`.
  * - **Pending drops:** a guess is counted and kept in `drops.pending`, with its narrative, until an

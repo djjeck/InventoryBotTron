@@ -1,6 +1,7 @@
 import { initialState, reduce, type State, type StateEvent } from '@inventorybottron/state';
 import { type BusEvent } from '@megabottron1999/core';
 import { describe, expect, it } from 'vitest';
+import { replyBus } from '#test/events.ts';
 import { gainedItems, gainedSchema, gains } from './gains.ts';
 import { toStateEvent } from './state.ts';
 
@@ -12,14 +13,7 @@ const S = 'mentre conti le nuvole dal tetto del mulino ti cade in mano ';
 const turn = (outcome: Record<string, unknown>): BusEvent =>
   ({ type: 'inventorybot.turn', t: T0, chat: '@InventoryBot', outcome }) as BusEvent;
 const reply = (r: Record<string, unknown>, query: string | null = null): BusEvent =>
-  ({
-    type: 'inventorybot.reply',
-    t: T0,
-    chat: '@InventoryBot',
-    query,
-    self: OWNER,
-    reply: r,
-  }) as BusEvent;
+  replyBus(r, query, { self: OWNER });
 const drop = (item: string, sure: boolean, more: Record<string, unknown> = {}) =>
   turn({ kind: 'gain', bot: 'InventoryBot', item, rarity: 'C', tags: [], sure, ...more });
 

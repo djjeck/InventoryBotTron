@@ -65,7 +65,7 @@ describe('the inventorybot-state node', () => {
     ]);
     expect(run.read('get', { path: 'owner.player' })).toBe(OWNER);
     expect(run.read('freshness', { section: 'inventory' })).toEqual({
-      snapshot: { t: T0, event: 'inventorybot.reply' },
+      snapshot: { t: T0, event: 'inventorybot.inventory' },
       deltas: 2,
       uncertain: 1,
       updated: { t: T0 + 2 * MIN, event: 'inventorybot.turn' },
@@ -198,13 +198,13 @@ describe('the inventorybot-state node', () => {
   it('refuses an event its reducer cannot apply, records it, and passes it', async () => {
     const first = await bootState(dir);
     await first.core.stop();
+    // An inventory without its items.
     first.log.write({
-      type: 'inventorybot.reply',
+      type: 'inventorybot.inventory',
       t: T0 + MIN,
       instance: 'inventorybot',
       chat: DM,
       query: null,
-      reply: { type: 'inventory' },
     });
     first.log.write({
       type: 'inventorybot.turn',
@@ -222,7 +222,7 @@ describe('the inventorybot-state node', () => {
     });
     const second = await bootState(dir, { at: T0 + 5 * MIN });
     expect(second.of('inventorybot-state.refused')).toMatchObject([
-      { event: 'inventorybot.reply', at: T0 + MIN, reason: expect.any(String) },
+      { event: 'inventorybot.inventory', at: T0 + MIN, reason: expect.any(String) },
     ]);
     expect(held(second)).toEqual({ 'una perla': 1 });
     await second.core.stop();

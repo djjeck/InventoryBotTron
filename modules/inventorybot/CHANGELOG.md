@@ -3,6 +3,30 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.6.0 (2026-11-13)
+
+- **One event type per kind of reply, instead of `inventorybot.reply`** (breaking). Each private
+  reply of a kind the parser knows is published as `inventorybot.<kind>`, the grammar's event type
+  in camel case (`inventorybot.inventory`, `.title`, `.itemInfo`, `.recipeDetail`, `.recipeList`,
+  `.craft`, `.show`, `.use`, `.gift`, `.give`, `.travel`, `.location`, `.travelBlocked`,
+  `.travelRequirement`, `.itemCooldown`, `.miss`, `.pakkomonRecord`, `.pakkomonReady`,
+  `.pakkomonChallenge`, `.pakkomonStunned`, `.pakkomonFight`), with its own schema, so that the
+  graph editor and a script's types know its fields: `{ chat, query, self?, playback?, ...fields }`,
+  the grammar's fields flat beside the context instead of nested in `reply`. Besides the replies the
+  state reads, it now publishes a refused `/viaggio` (`travelBlocked`, `travelRequirement`), an
+  item's cooldown (`itemCooldown`) and every fixed reply of the bot (`miss`: help, refusals,
+  not-found), not only a `/dai` refused with the count owned. Only the private chat's replies, all
+  the owner's; the drops and the adventure's cooldown stay `inventorybot.turn`'s alone. The module's
+  new README lists every event, and the bot's replies that refuse a command, with whether the
+  grammar recognises each (for MegaBotTron1999's coming command answers, its issue #59).
+- **The `inventorybot-state` node** applies the new events instead of `inventorybot.reply`. Its
+  `events` input is bound to the parser's namespace, so **no edge needs rebinding**; a node that
+  starts fresh after the update reads only the turns of the older log, not its `inventorybot.reply`
+  events.
+- **What a script must change:** a handler of `inventorybot.reply` listens to the kind's event
+  instead and reads its fields at the top (`e.items`, not `e.reply.items`). A script on
+  `inventorybot-state.gained` or `.changed` is unchanged.
+
 ## 0.5.0 (2026-11-13)
 
 - **A new event, `inventorybot-state.gained`** (`{ item, sure, qty, exact }`): the state plugin

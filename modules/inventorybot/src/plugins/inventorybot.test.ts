@@ -11,7 +11,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { type z } from 'zod';
 import { KNOWLEDGE_DOC } from '#src/knowledge.ts';
+import { REPLY_KINDS, replyEvent } from '#src/replies.ts';
 import { DM, GROUP, MIN, OWNER, runParser, T0 } from '#test/run.ts';
 import { INVENTORYBOT_PARSER, inventorybotPlugin, plugins } from './inventorybot.ts';
 
@@ -25,7 +27,14 @@ describe('the inventorybot parser', () => {
     expect(plugins).toEqual([inventorybotPlugin]);
     const m = parseManifest(inventorybotPlugin.manifest);
     expect(m.id).toBe(INVENTORYBOT_PARSER);
-    expect(Object.keys(m.events ?? {})).toEqual(['inventorybot.turn', 'inventorybot.reply']);
+    expect(Object.keys(m.events ?? {})).toEqual([
+      'inventorybot.turn',
+      ...REPLY_KINDS.map(replyEvent),
+    ]);
+    // Each kind with its own schema, described for the editor.
+    expect(m.events?.['inventorybot.craft']?.description).toBe(
+      'A recipe made: the ingredients spent and the item made'
+    );
     expect(Object.keys(m.interface.state ?? {})).toEqual(['rest']);
     expect(Object.keys(m.interface.actions ?? {})).toEqual(['sent', 'seed']);
     expect(m.config).toBeUndefined();
@@ -107,7 +116,7 @@ describe('the inventorybot parser', () => {
     ]);
   });
 
-  it('publishes the private replies the player state reads, with the command they answer', async () => {
+  it('publishes each private reply as its kind, with the command it answers', async () => {
     const p = await runParser();
     p.owner('/inventario C');
     p.bot(`@${OWNER}, possiedi:\n- una ghianda [C] x3`, { chat: DM });
@@ -116,7 +125,10 @@ describe('the inventorybot parser', () => {
     p.bot(`@${OWNER} il fornaio, possiedi:\n- un sasso [C] x1`, { chat: DM });
     p.owner('/dai lucia_b 3 ghianda');
     p.bot('non ne hai abbastanza, ne possiedi solo 2.', { chat: DM });
+    p.owner('/mostra corda');
     p.bot(`@${OWNER}, non hai niente del genere`, { chat: DM });
+    p.owner('/usa perla');
+    p.bot('una perla deve raffreddarsi ancora per 2 minuti prima di poterla usare', { chat: DM });
     // Not in the group, nor another sender's, nor a command too old.
     p.bot(`@${OWNER}, possiedi:\n- un sasso [C] x1`);
     p.account.hear({
@@ -128,23 +140,34 @@ describe('the inventorybot parser', () => {
     p.owner('ciao');
     p.kit.runUntil(T0 + 3 * MIN);
     p.bot(`@${OWNER}, possiedi:\n- una perla [R] x1`, { chat: DM });
-    expect(p.replies.map((e) => [e['query'], (e['reply'] as { type: string }).type])).toEqual([
-      ['/inventario C', 'inventory'],
-      ['/inventario', 'inventory'],
-      ['/dai lucia_b 3 ghianda', 'miss'],
-      [null, 'inventory'],
+    expect(p.replies.map((e) => [e['query'], e.type])).toEqual([
+      ['/inventario C', 'inventorybot.inventory'],
+      ['/inventario', 'inventorybot.inventory'],
+      ['/dai lucia_b 3 ghianda', 'inventorybot.miss'],
+      ['/mostra corda', 'inventorybot.miss'],
+      ['/usa perla', 'inventorybot.itemCooldown'],
+      [null, 'inventorybot.inventory'],
     ]);
-    expect(p.replies[0]).toMatchObject({
-      chat: DM,
+    // The context, then the grammar's fields, flat.
+    expect(p.replies[0]).toEqual({
+      type: 'inventorybot.inventory',
       t: T0,
-      reply: {
-        type: 'inventory',
-        filtered: true,
-        items: [{ name: 'una ghianda', rarity: 'C', usable: false, qty: 3 }],
-      },
+      instance: 'inventorybot',
+      chat: DM,
+      query: '/inventario C',
+      self: OWNER,
+      filtered: true,
+      truncated: false,
+      items: [{ name: 'una ghianda', rarity: 'C', usable: false, qty: 3 }],
     });
-    expect(p.replies[2]?.['reply']).toMatchObject({ owned: 2 });
-    expect(p.replies[0]?.['self']).toBe(OWNER);
+    expect(p.replies[2]).toMatchObject({ reply: 'dai_not_enough', owned: 2 });
+    expect(p.replies[4]).toMatchObject({ item: 'una perla', action: 'use', remaining: 120 });
+    // Every one as its kind's schema says, no field more nor fewer.
+    const schemas = parseManifest(inventorybotPlugin.manifest).events ?? {};
+    for (const e of p.replies) {
+      const { type, t: _, instance: __, ...payload } = e;
+      expect((schemas[type] as z.ZodObject).strict().safeParse(payload).success, type).toBe(true);
+    }
   });
 
   it('reads the /esporta file its message carries, and logs one that came without its text', async () => {
@@ -155,14 +178,17 @@ describe('the inventorybot parser', () => {
     p.bot(caption, { chat: DM, document: { ...document, skipped: 'size' } });
     p.bot(caption, { chat: DM, document: { ...document, text: '2x\tuna perla\t[C]\r\n' } });
     p.bot(caption, { chat: DM });
-    expect(p.replies.map((e) => e['reply'])).toEqual([
-      {
-        type: 'inventory',
-        filtered: false,
-        truncated: false,
-        exported: true,
-        items: [{ name: 'una perla', rarity: 'C', usable: false, qty: 2 }],
-      },
+    expect(p.replies.map(({ type, chat, query, ...fields }) => [type, query, fields])).toEqual([
+      [
+        'inventorybot.inventory',
+        '/esporta',
+        expect.objectContaining({
+          filtered: false,
+          truncated: false,
+          exported: true,
+          items: [{ name: 'una perla', rarity: 'C', usable: false, qty: 2 }],
+        }),
+      ],
     ]);
     expect(p.lines.filter((l) => l.includes('without its text'))).toEqual([
       expect.stringContaining('file.txt, text/plain, 30 bytes) came without its text (size)'),

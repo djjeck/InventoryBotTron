@@ -8,16 +8,17 @@
  * - Its cooldown names nobody: read only in the private chat, with its wait.
  * - In private, the first message after a turn that is neither: claimed and unread (drift).
  *
- * - In private, every reply the player state reads besides (an inventory, an item's card, a
- *   recipe, a craft, a `/mostra`, a use, a gift or a give, a place, a Pakkomon): published as
- *   `inventorybot.reply`, the grammar's event read with the owner's last command there, which it
- *   answers (since 0.2.0). The `/esporta` reply is read from the file its message carries, as a
- *   whole listing (since 0.4.1); its caption alone tells nothing, and a file that came without its
- *   text is logged with why. A reply read from a message played back is marked `playback: true`
- *   (since 0.4.0), as the turn parser marks its turns: a state applies it and announces nothing of
- *   it. A turn's `gain` carries its drop's narrative (`raw`), with which a reader resolves a guess
- *   again.
- *
+ * - In private, every other reply of a kind it knows (`src/replies.ts`: a listing, an item's card,
+ *   a recipe, a craft, a `/mostra`, a use, a gift or a give, a place, a Pakkomon, an item's
+ *   cooldown, one of the bot's fixed replies): published as its own event type,
+ *   `inventorybot.<kind>`, the grammar's event read with the owner's last command there, which it
+ *   answers, each with its own schema (since 0.6.0; until then all were one `inventorybot.reply`).
+ *   The `/esporta` reply is read from the file its message carries, as a whole listing (since
+ *   0.4.1); its caption alone tells nothing, and a file that came without its text is logged with
+ *   why. A reply read from a message played back is marked `playback: true` (since 0.4.0), as the
+ *   turn parser marks its turns: a state applies it and announces nothing of it. A turn's `gain`
+ *   carries its drop's narrative (`raw`), with which a reader resolves a guess again.
+
  * Each instance keeps what it learns (items and drops' sentences) in its own store
  * (`src/knowledge.ts`), so the base parser is made per instance, with its knowledge, rather than
  * once in the factory. Its action `seed` adds to it what the owner's own export teaches
@@ -32,6 +33,7 @@ import {
 import { z } from 'zod';
 import { InventoryKnowledge, seedSchema } from '#src/knowledge.ts';
 import { readInventoryBot, readStateReply } from '#src/read.ts';
+import { REPLY_SCHEMAS, replyEvent, replyPayload } from '#src/replies.ts';
 import { INVENTORYBOT, TURN_COMMANDS } from '#src/turn.ts';
 
 /** The plugin's id, and the namespace of its events (`inventorybot.turn`). */
@@ -47,33 +49,10 @@ const spec = (read: TurnParserSpec['read']): TurnParserSpec => ({
 
 const base = turnParserPlugin(spec(() => undefined)).manifest;
 
-/** The event of a reply the player state reads, besides the turns. */
-export const REPLY_EVENT = `${INVENTORYBOT_PARSER}.reply`;
-
-/** `inventorybot.reply`'s payload. */
-export const replySchema = z
-  .object({
-    chat: z.string(),
-    /** The owner's last command in the chat, which the reply answers; null when none is recent. */
-    query: z.string().nullable(),
-    /** The owner's username, without `@`, once the account knows it. */
-    self: z.string().optional(),
-    /** The grammar's event (`@inventorybottron/grammar`), as `classify` reads the reply. */
-    reply: z.looseObject({ type: z.string() }),
-    /**
-     * Since 0.4.0: true for a reply read from a message played back (missed while the instance was
-     * down, delivered past the connector's grace: MegaBotTron1999's D83), history and not news.
-     */
-    playback: z.boolean().optional(),
-  })
-  .describe(
-    "A reply of @InventoryBot's in private that lists, shows or moves the owner's items, as the grammar reads it"
-  );
-
 export const inventorybotPlugin: Plugin = {
   manifest: {
     ...base,
-    events: { ...base.events, [REPLY_EVENT]: replySchema },
+    events: { ...base.events, ...REPLY_SCHEMAS },
     interface: {
       ...base.interface,
       actions: {
@@ -110,16 +89,14 @@ export const inventorybotPlugin: Plugin = {
         );
       const reply = readStateReply(m.text, query, doc?.text);
       if (reply === undefined) return;
-      const self = chat.self();
       ctx.bus.publish(
-        REPLY_EVENT,
-        {
+        replyEvent(reply.type),
+        replyPayload(reply, {
           chat: m.chat,
           query,
-          ...(self === undefined ? {} : { self }),
-          reply,
-          ...(m.playback ? { playback: true } : {}),
-        },
+          self: chat.self(),
+          playback: m.playback === true,
+        }),
         m.time
       );
     });

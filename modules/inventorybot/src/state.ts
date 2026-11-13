@@ -7,8 +7,9 @@
  *   (`sure: false`) is applied as one, kept pending with its narrative (`raw`) until a later event
  *   teaches the item. A gain of before 0.2.0, without `raw`, is a lucky drop if sure, and a guess
  *   whose narrative is its item if not. Any other outcome changes nothing.
- * - **`inventorybot.reply`**: the grammar's event of a private reply, the owner's (`dm`, and their
- *   username when the account knows it), read with the command it answers. What the reply leaves
+ * - **`inventorybot.<kind>`** (`src/replies.ts`, since 0.6.0): the grammar's event of a private
+ *   reply, the owner's (`dm`, and their username when the account knows it), read with the command
+ *   it answers. What the reply leaves
  *   to its command is resolved as the bot resolves it, by the words of the command's argument
  *   (docs/bot-protocol.md §3): a `/usa`'s item among those held (else those seen), a craft's
  *   recipe among those listed or made.
@@ -18,12 +19,13 @@ import { isoOf, queryArg, type State, type StateEvent } from '@inventorybottron/
 import { type BusEvent } from '@megabottron1999/core';
 import { type Mark } from '@megabottron1999/turns/state-plugin.ts';
 import { z } from 'zod';
+import { CONTEXT_FIELDS, REPLY_KINDS, replyEvent, type ReplyKind, replyKindOf } from './replies.ts';
 
 /** The plugin's id, and the namespace of its events (`inventorybot-state.changed`). */
 export const INVENTORYBOT_STATE = 'inventorybot-state';
 
-/** The parser's events it applies. */
-export const CONSUMES = ['inventorybot.turn', 'inventorybot.reply'] as const;
+/** The parser's events it applies: the turns, and each kind of private reply. */
+export const CONSUMES: readonly string[] = ['inventorybot.turn', ...REPLY_KINDS.map(replyEvent)];
 
 /** The paths of the state its node's panel draws first, and its card's line. */
 export const PINS = ['inventory.held', 'drops.latest'];
@@ -161,13 +163,19 @@ function lookup(ws: readonly string[], ...pools: (() => string[])[]): string | u
   return undefined;
 }
 
+/** A bus event's own fields, which are not its payload's. */
+const BUS_FIELDS: ReadonlySet<string> = new Set(['type', 't', 'instance']);
+
 /** A reply's event as the state applies it, what its command names resolved against the state. */
-function fromReply(s: State, e: BusEvent): StateEvent {
-  const reply = e['reply'] as StateEvent;
+function fromReply(s: State, e: BusEvent, kind: ReplyKind): StateEvent {
+  const fields = Object.fromEntries(
+    Object.entries(e).filter(([k]) => !BUS_FIELDS.has(k) && !CONTEXT_FIELDS.includes(k))
+  );
   const query = (e['query'] as string | null | undefined) ?? null;
   const self = e['self'] as string | undefined;
   const ev = {
-    ...reply,
+    ...fields,
+    type: kind,
     dm: true,
     date: isoOf(e.t),
     query,
@@ -208,17 +216,16 @@ function fromTurn(e: BusEvent): StateEvent | undefined {
 /** The state's event of one of the parser's, the owner's name learned from it; none to apply. */
 export function toStateEvent(s: State, e: BusEvent): StateEvent | undefined {
   if (e.type === 'inventorybot.turn') return fromTurn(e);
-  if (e.type === 'inventorybot.reply') return fromReply(s, e);
-  return undefined;
+  const kind = replyKindOf(e.type);
+  return kind === undefined ? undefined : fromReply(s, e, kind);
 }
 
 /** Whether a reply lists the whole inventory: complete, and with no filter. */
 function wholeListing(e: BusEvent): boolean {
-  const r = e['reply'] as { type?: string; truncated?: boolean; exported?: true } | undefined;
-  if (e.type !== 'inventorybot.reply' || r?.type !== 'inventory' || r.truncated) return false;
+  if (e.type !== replyEvent('inventory') || e['truncated'] === true) return false;
   const q = e['query'] as string | null | undefined;
   return (
-    r.exported === true || queryArg(q, ...INVENTORY_COMMANDS, ...INVENTORY_LIST_COMMANDS) === ''
+    e['exported'] === true || queryArg(q, ...INVENTORY_COMMANDS, ...INVENTORY_LIST_COMMANDS) === ''
   );
 }
 
