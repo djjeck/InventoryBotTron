@@ -179,12 +179,15 @@ came from RegnoTron's `game-bots` module with the same plugin id, event and stor
 keeps running on its instance ([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome
 carries its drop's narrative (`raw`, optional, since 0.2.0), the rest of the outcome's shape
 unchanged for the nodes that read the turns of several games. Besides the turns, it publishes as
-`inventorybot.reply` (`{ chat, query, self?, reply }`) each reply of the bot's in the private chat
-that the player state reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's card, a recipe,
-a craft, a `/mostra`, a use, a gift or a give, a `/dai` refused with the count owned, a place, a
-Pakkomon), `reply` being the grammar's event read with the owner's last command there (`query`, if
-within the turn parser's answer window), which it answers. The group's replies stay the turns'. The
-`/esporta` file is not read live: the account gives the caption only.
+`inventorybot.reply` (`{ chat, query, self?, reply, playback? }`) each reply of the bot's in the
+private chat that the player state reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's
+card, a recipe, a craft, a `/mostra`, a use, a gift or a give, a `/dai` refused with the count
+owned, a place, a Pakkomon), `reply` being the grammar's event read with the owner's last command
+there (`query`, if within the turn parser's answer window), which it answers; one read from a
+message played back (missed while the instance was down, past the connector's grace:
+MegaBotTron1999's D83) carries `playback: true`, as the turns do, so that a state applies it and
+announces nothing of it (since 0.4.0). The group's replies stay the turns'. The `/esporta` file is
+not read live: the account gives the caption only.
 
 - **The `inventorybot-state` plugin** (`src/plugins/inventorybot-state.ts`, its own plugin entry,
   since 0.3.0): the owner's player state, MegaBotTron1999's `statePlugin` (its docs/bot-os-api.md

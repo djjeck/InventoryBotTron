@@ -147,6 +147,21 @@ describe('the inventorybot parser', () => {
     expect(p.replies[0]?.['self']).toBe(OWNER);
   });
 
+  it('marks a reply read from a message played back, as the turns are marked', async () => {
+    const p = await runParser();
+    p.owner('/inventario', { playback: true });
+    p.bot(`@${OWNER}, possiedi:\n- un sasso [C] x1`, { chat: DM, playback: true });
+    p.bot(`@${OWNER}, ${S}una perla [C]!`, { chat: DM, playback: true });
+    p.owner('/inventario');
+    p.bot(`@${OWNER}, possiedi:\n- un sasso [C] x2`, { chat: DM });
+    expect(p.replies.map((e) => [e['query'], e['playback']])).toEqual([
+      ['/inventario', true],
+      ['/inventario', undefined],
+    ]);
+    expect(p.replies[1]).not.toHaveProperty('playback');
+    expect(p.events.map((e) => e['playback'])).toEqual([true]);
+  });
+
   it('runs on a saved graph as the instance runs it, on the node it had in game-bots', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'inventorybot-'));
     try {

@@ -11,7 +11,9 @@
  * - In private, every reply the player state reads besides (an inventory, an item's card, a
  *   recipe, a craft, a `/mostra`, a use, a gift or a give, a place, a Pakkomon): published as
  *   `inventorybot.reply`, the grammar's event read with the owner's last command there, which it
- *   answers (since 0.2.0). A turn's `gain` carries its drop's narrative (`raw`), with which a
+ *   answers (since 0.2.0), marked `playback: true` when read from a message played back (since
+ *   0.4.0), as the turn parser marks its turns: a state applies it and announces nothing of it. A
+ *   turn's `gain` carries its drop's narrative (`raw`), with which a
  *   reader resolves a guess again.
  *
  * Each instance keeps what it learns (items and drops' sentences) in its own store
@@ -56,6 +58,11 @@ export const replySchema = z
     self: z.string().optional(),
     /** The grammar's event (`@inventorybottron/grammar`), as `classify` reads the reply. */
     reply: z.looseObject({ type: z.string() }),
+    /**
+     * Since 0.4.0: true for a reply read from a message played back (missed while the instance was
+     * down, delivered past the connector's grace: MegaBotTron1999's D83), history and not news.
+     */
+    playback: z.boolean().optional(),
   })
   .describe(
     "A reply of @InventoryBot's in private that lists, shows or moves the owner's items, as the grammar reads it"
@@ -98,7 +105,13 @@ export const inventorybotPlugin: Plugin = {
       const self = chat.self();
       ctx.bus.publish(
         REPLY_EVENT,
-        { chat: m.chat, query, ...(self === undefined ? {} : { self }), reply },
+        {
+          chat: m.chat,
+          query,
+          ...(self === undefined ? {} : { self }),
+          reply,
+          ...(m.playback ? { playback: true } : {}),
+        },
         m.time
       );
     });

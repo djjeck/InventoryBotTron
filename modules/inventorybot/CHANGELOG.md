@@ -3,6 +3,15 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.4.0 (2026-11-13)
+
+- **`inventorybot.reply` marks history**: a reply read from a message played back (missed while the
+  instance was down and delivered past the connector's grace, MegaBotTron1999's D83) carries
+  `playback: true`, a new optional field, as the turn parser already marks `inventorybot.turn`. A
+  state applies it, since it is the truth however late, and tells nothing of it in its own events; a
+  script should check it before acting. A live reply has no `playback`. Built against
+  MegaBotTron1999 0.1.7.
+
 ## 0.3.0 (2026-11-13)
 
 - **A new plugin, `inventorybot-state`**: the owner's player state, kept by MegaBotTron1999's
