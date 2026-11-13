@@ -14,7 +14,9 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
 - `packages/grammar/`: InventoryBot's reply grammar, the module `inventorybot-grammar`, which
   provides `@inventorybottron/grammar` (below). It came from the wiki's `packages/grammar` at its
   commit `1ca8615`, as a copy (its history stays in the wiki's repository).
-- `packages/state/`: the player state, next. Not there yet.
+- `packages/state/`: InventoryBot's player state, the module `inventorybot-player-state`, which
+  provides `@inventorybottron/state` (below, "The state package"). It came from the wiki's
+  `src/inventorybot/player.ts` and `player-pakkomon.ts`, made a reducer of one event at a time.
 - `modules/inventorybot/`: the MegaBotTron1999 module `inventorybot`, with the `inventorybot` parser
   plugin (below, "The inventorybot module").
 - `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.0-alpha.17`),
@@ -128,6 +130,41 @@ by its phases: the wiki reads every export with this grammar.
 - **A module that still imports the former name**, `@inventorybot-wiki/grammar` (0.2.0, the wiki's
   install of `inventorybot-grammar`), keeps that install until it moves to
   `@inventorybottron/grammar` ([its changelog](packages/grammar/CHANGELOG.md)).
+
+## The state package
+
+`packages/state/`, the npm workspace package `@inventorybottron/state` and the library module
+`inventorybot-player-state` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0`, by its
+entry only): the owner's state at InventoryBot, kept one reply at a time, for the wiki, which folds
+a whole export with it, and for the `inventorybot` module's state plugin, which keeps it live. Its
+entry, `src/index.ts`, is its contract:
+
+- `initialState(player?)`, `apply(state, event, know?)` (in place) and `reduce(state, event, know?)`
+  (pure, a copy): the reducer (`reduce.ts`, `holdings.ts`, `pakkomon.ts`, `pending.ts`, `seen.ts`).
+  Its events (`StateEvent`, `types.ts`) are the grammar's, with the reply's context (`date`, ISO
+  with its offset; `player`, `dm`, `forwarded`, `broadcast`; `query`, the command it answers) and
+  what their reader resolved: a drop's item (`resolved`, with `sure: false` for a guess, and its
+  place, `location`), a craft's `recipe`, a use's `used_item`, and a give to the owner `notified` by
+  its private notice. What depends on the game beyond one reply is the reader's `Know` (an item's
+  rarity, a recipe's ingredients, whether a use consumes the item, every item known); the state
+  stands in with its own when the reader gives none.
+- `State`, its sections: `owner` (`player`, `as_of`), `inventory` (`held`, the items above zero, and
+  `items`, each estimated item's `qty`, `exact`, `date`, `via`, `rarity` and `tags`), `items` (first
+  seen, used), `recipes` (made), `recipe_list`, `inventory_check` (the `/ricetta` lists against the
+  estimate), `locations` (visited, adventures), `pakkomon`, `shapes`, and `drops`: the latest drops,
+  and those whose item is a guess, kept pending with their narrative until an event teaches the item
+  (a listing that names an item that ends it, or a sure drop of its sentence), when the count moves
+  from the guess to the item inside the reducer (`pending.ts`).
+- `playerView(state, places?)`: the state as the wiki shows it (`PlayerView`), a shaped item and
+  every Pakkomon merged, holdings above zero, sorted.
+- The rules the wiki's phase 5 shares with it: `isMine`, `queryArg`, `inventoryScope`,
+  `RARITY_FILTER`, `isFailedUse` (`USE_FAILED`), `nameKey`, `pakkomonOf`, `renamed`, `sameTransfer`
+  (`TRANSFER_WINDOW`), and the dates (`instant`, `isoPlusSeconds`, `isoOf`).
+
+Every record is read and written by its own properties (`records.ts`), so that an item may be named
+anything, `__proto__` included. The wiki vendors it as it does the grammar (its workspace
+`vendor/InventoryBotTron/packages/state`), and its `player.ts` is the fold and the view: the goldens
+of its player state are this package's.
 
 ## The inventorybot module
 
