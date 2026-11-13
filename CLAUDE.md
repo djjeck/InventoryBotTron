@@ -19,11 +19,11 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
   `src/inventorybot/player.ts` and `player-pakkomon.ts`, made a reducer of one event at a time.
 - `modules/inventorybot/`: the MegaBotTron1999 module `inventorybot`, with the `inventorybot` parser
   plugin (below, "The inventorybot module").
-- `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.0-alpha.17`),
-  whose `packages/*` are workspaces, so that the modules are written, type-checked and tested
-  against the shell they run in (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the
-  shell is made in its repository, and the pin is moved here (with `npm install` for the lockfile)
-  in a commit of its own.
+- `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.7`), whose
+  `packages/*` are workspaces, so that the modules are written, type-checked and tested against the
+  shell they run in (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the shell is
+  made in its repository, and the pin is moved here (with `npm install` for the lockfile) in a
+  commit of its own.
 
 A package imports nothing outside its own folder but other packages of this repository
 (`@inventorybottron/*`): no npm package, no Node API, nothing of MegaBotTron1999, so that the wiki,
