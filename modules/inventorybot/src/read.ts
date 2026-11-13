@@ -18,7 +18,7 @@
  * The bot writes some accented letters decomposed, so the text is read in its composed form (NFC),
  * and the items are kept in it.
  */
-import { classify, type Event } from '@inventorybottron/grammar';
+import { classify, type Event, type EventType } from '@inventorybottron/grammar';
 import { type BotMessage, type TurnReading } from '@megabottron1999/turns/turn-parser.ts';
 import { type InventoryKnowledge } from './knowledge.ts';
 import { INVENTORYBOT, type InventoryOutcome, TURN_REST_MS } from './turn.ts';
@@ -97,6 +97,7 @@ export function readInventoryBot(m: BotMessage, known: InventoryKnowledge): Turn
       rarity: ev.rarity,
       tags: ev.usable ? ['usabile'] : [],
       sure: gain.sure,
+      ...(ev.kind === 'adventure' ? { raw: ev.raw } : {}),
     };
     return { outcome, restMs: TURN_REST_MS };
   }
@@ -114,4 +115,48 @@ export function readInventoryBot(m: BotMessage, known: InventoryKnowledge): Turn
     return { outcome, restMs: wait };
   }
   return m.answers ? { unread: true } : undefined;
+}
+
+/**
+ * The replies the player state reads besides the drops and the cooldown, which the parser publishes
+ * as turns: what lists, shows or moves the owner's items (an inventory, a title list, an item's
+ * card, a recipe and the recipe list, a craft, a `/mostra`, a use, a gift and a give, a `/dai`
+ * refused with the count owned), where they are, and their Pakkomon.
+ */
+export const STATE_REPLIES: ReadonlySet<EventType> = new Set<EventType>([
+  'inventory',
+  'title',
+  'item_info',
+  'recipe_detail',
+  'recipe_list',
+  'craft',
+  'show',
+  'use',
+  'gift',
+  'give',
+  'miss',
+  'travel',
+  'location',
+  'pakkomon_record',
+  'pakkomon_ready',
+  'pakkomon_challenge',
+  'pakkomon_stunned',
+  'pakkomon_fight',
+]);
+
+/**
+ * A reply of the bot's in the private chat, read with the command it answers (`query`, the owner's
+ * last command there, or null), if it is one the player state reads (`STATE_REPLIES`): a refusal
+ * only when it states a count (`/dai`'s "ne possiedi solo N").
+ */
+export function readStateReply(text: string, query: string | null): Event | undefined {
+  const composed = text.normalize('NFC').trim();
+  // As written; else with a title after the addressee taken off.
+  let ev = classify(composed, query);
+  const addressed = ADDRESSED.exec(composed);
+  if (ev.type === 'unknown' && addressed !== null)
+    ev = classify(`@${addressed[1]}, ${composed.slice(addressed[0].length)}`, query);
+  if (!STATE_REPLIES.has(ev.type)) return undefined;
+  if (ev.type === 'miss' && ev.owned === undefined) return undefined;
+  return ev;
 }

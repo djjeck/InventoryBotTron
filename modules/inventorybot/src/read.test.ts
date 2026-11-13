@@ -1,7 +1,7 @@
 import { type BotMessage } from '@megabottron1999/turns/turn-parser.ts';
 import { describe, expect, it } from 'vitest';
 import { InventoryKnowledge } from './knowledge.ts';
-import { listedItems, readInventoryBot, readReply } from './read.ts';
+import { listedItems, readInventoryBot, readReply, readStateReply } from './read.ts';
 
 // Invented sentences (CLAUDE.md, "Game content"), with items of scripts/universe.md.
 const S = 'mentre conti le nuvole dal tetto del mulino ti cade in mano ';
@@ -38,22 +38,23 @@ describe('readInventoryBot', () => {
         msg(`@Mario_R, ${S}un tubetto di colla verde [R] [usabile]!`),
         knowledge(['un tubetto di colla verde'])
       )
-    ).toEqual(gain('un tubetto di colla verde', 'R', { tags: ['usabile'] }));
+    ).toMatchObject(gain('un tubetto di colla verde', 'R', { tags: ['usabile'] }));
   });
 
   it('reads an addressee with a title, an announced drop, and a rarity with a plus', () => {
     const k = knowledge(['una ghianda', 'un sasso']);
-    expect(readInventoryBot(msg(`@mario_r il cartografo, ${S}una ghianda [C+]!`), k)).toEqual(
+    expect(readInventoryBot(msg(`@mario_r il cartografo, ${S}una ghianda [C+]!`), k)).toMatchObject(
       gain('una ghianda', 'C+')
     );
-    expect(readInventoryBot(msg(`[W] @mario_r, ${S}un sasso [N]!`), k)).toEqual(
+    expect(readInventoryBot(msg(`[W] @mario_r, ${S}un sasso [N]!`), k)).toMatchObject(
       gain('un sasso', 'N')
     );
   });
 
   it("guesses an unknown drop's item, and says so", () => {
+    // With its narrative, from which a reader that learns more resolves it again.
     expect(readInventoryBot(msg(`@mario_r, ${S}una perla [C]!`), knowledge())).toEqual(
-      gain('una perla', 'C', { sure: false })
+      gain('una perla', 'C', { sure: false, raw: `${S}una perla` })
     );
   });
 
@@ -61,16 +62,20 @@ describe('readInventoryBot', () => {
     const k = knowledge();
     expect(readInventoryBot(msg('@lucia_b, possiedi:\n- una perla [C] x2'), k)).toBeUndefined();
     expect(readInventoryBot(msg(`@lucia_b, ${S}una perla [C]!`), k)).toBeUndefined();
-    expect(readInventoryBot(msg(`@mario_r, ${S}un sasso [C]!`), k)).toEqual(gain('un sasso', 'C'));
+    expect(readInventoryBot(msg(`@mario_r, ${S}un sasso [C]!`), k)).toMatchObject(
+      gain('un sasso', 'C')
+    );
   });
 
   it('reads the lucky adventure, learning its prize, and keeps one it cannot read as unread', () => {
     const lucky = "Complimenti @mario_r, questa e' l'avventura FORTUNATA del giorno! Hai vinto: ";
     const k = knowledge();
-    expect(readInventoryBot(msg(`${lucky}una chiave di ebano 🔑 [X]`), k)).toEqual(
+    expect(readInventoryBot(msg(`${lucky}una chiave di ebano 🔑 [X]`), k)).toMatchObject(
       gain('una chiave di ebano 🔑', 'X')
     );
     expect(k.items.has('una chiave di ebano 🔑')).toBe(true);
+    // Its item is delimited: no narrative.
+    expect(readInventoryBot(msg(`${lucky}una perla [X]`), k)).not.toHaveProperty('outcome.raw');
     expect(readInventoryBot(msg(`${lucky}qualcosa`), k)).toEqual({ unread: true });
     expect(readInventoryBot(msg(`${lucky.replace('mario_r', 'gino_x')}qualcosa`), k)).toBe(
       undefined
@@ -80,7 +85,7 @@ describe('readInventoryBot', () => {
   it('reads the item of a decomposed text in its composed form', () => {
     const k = knowledge(['un caffè ristretto']);
     const text = `@mario_r, ${S}un caffè ristretto [C]!`.normalize('NFD');
-    expect(readInventoryBot(msg(text), k)).toEqual(gain('un caffè ristretto', 'C'));
+    expect(readInventoryBot(msg(text), k)).toMatchObject(gain('un caffè ristretto', 'C'));
   });
 
   it('reads the cooldown in private only, with its wait or the rest', () => {
@@ -134,5 +139,33 @@ describe('listedItems', () => {
       )
     ).toEqual([]);
     expect(items(`@mario_r, ${S}una perla [C]!`)).toEqual([]);
+  });
+});
+
+describe('readStateReply', () => {
+  it('reads the replies the player state reads, with their command', () => {
+    expect(
+      readStateReply('@mario_r, possiedi:\n- una perla [C] x2', '/inventario C')
+    ).toMatchObject({
+      type: 'inventory',
+      filtered: true,
+    });
+    expect(
+      readStateReply('@mario_r il cartografo, possiedi:\n- una perla [C] x2', null)
+    ).toMatchObject({
+      type: 'inventory',
+    });
+    expect(
+      readStateReply('non ne hai abbastanza, ne possiedi solo 2.', '/dai lucia_b 3 perla')
+    ).toMatchObject({
+      type: 'miss',
+      owned: 2,
+    });
+  });
+
+  it('not the turns, refusals without a count, nor what it cannot read', () => {
+    expect(readStateReply(`@mario_r, ${S}una perla [C]!`, '/avventura')).toBeUndefined();
+    expect(readStateReply('@mario_r, non hai niente del genere', '/mostra x')).toBeUndefined();
+    expect(readStateReply('Boh', null)).toBeUndefined();
   });
 });

@@ -3,6 +3,18 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.2.0 (2026-11-13)
+
+- **A new event, `inventorybot.reply`** (`{ chat, query, self?, reply }`): each reply of the bot's
+  in the private chat that lists, shows or moves the owner's items (an inventory, a title list, an
+  item's card, a recipe and the recipe list, a craft, a `/mostra`, a use, a gift, a give, a `/dai`
+  refused with the count owned), a place reached or shown, and their Pakkomon's records and fights,
+  as the grammar reads it (`reply`) with the owner's last command there (`query`), for the player
+  state. The `/esporta` file is not among them: the account gives its caption only.
+- **A gain carries its drop's narrative**, `raw` (optional; none for the lucky adventure), from
+  which a reader resolves a guess again once it knows more. Nothing else of `inventorybot.turn`
+  changes: a node that reads it ignores the field.
+
 ## 0.1.2 (2026-11-13)
 
 - It imports the grammar `^0.4.0`, whose entry exports more; it uses nothing new of it. No change to

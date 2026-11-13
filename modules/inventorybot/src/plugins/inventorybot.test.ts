@@ -25,7 +25,7 @@ describe('the inventorybot parser', () => {
     expect(plugins).toEqual([inventorybotPlugin]);
     const m = parseManifest(inventorybotPlugin.manifest);
     expect(m.id).toBe(INVENTORYBOT_PARSER);
-    expect(Object.keys(m.events ?? {})).toEqual(['inventorybot.turn']);
+    expect(Object.keys(m.events ?? {})).toEqual(['inventorybot.turn', 'inventorybot.reply']);
     expect(Object.keys(m.interface.state ?? {})).toEqual(['rest']);
     expect(Object.keys(m.interface.actions ?? {})).toEqual(['sent', 'seed']);
     expect(m.config).toBeUndefined();
@@ -42,7 +42,15 @@ describe('the inventorybot parser', () => {
     p.kit.runUntil(T0 + MIN);
     p.bot(COOLDOWN, { chat: DM });
     expect(p.outcomes()).toEqual([
-      { kind: 'gain', bot: 'InventoryBot', item: 'una perla', rarity: 'C', tags: [], sure: false },
+      {
+        kind: 'gain',
+        bot: 'InventoryBot',
+        item: 'una perla',
+        rarity: 'C',
+        tags: [],
+        sure: false,
+        raw: `${S}una perla`,
+      },
       {
         kind: 'gain',
         bot: 'InventoryBot',
@@ -50,6 +58,7 @@ describe('the inventorybot parser', () => {
         rarity: 'R',
         tags: ['usabile'],
         sure: false,
+        raw: `${S}una chiave di ebano 🔑`,
       },
       { kind: 'nothing', bot: 'InventoryBot', reason: 'cooldown', retryMs: 20 * MIN },
     ]);
@@ -96,6 +105,46 @@ describe('the inventorybot parser', () => {
       ['un sasso', true],
       ['un dado di legno', true],
     ]);
+  });
+
+  it('publishes the private replies the player state reads, with the command they answer', async () => {
+    const p = await runParser();
+    p.owner('/inventario C');
+    p.bot(`@${OWNER}, possiedi:\n- una ghianda [C] x3`, { chat: DM });
+    // A title after the addressee; a refusal with its count, but not one without.
+    p.owner('/inventario');
+    p.bot(`@${OWNER} il fornaio, possiedi:\n- un sasso [C] x1`, { chat: DM });
+    p.owner('/dai lucia_b 3 ghianda');
+    p.bot('non ne hai abbastanza, ne possiedi solo 2.', { chat: DM });
+    p.bot(`@${OWNER}, non hai niente del genere`, { chat: DM });
+    // Not in the group, nor another sender's, nor a command too old.
+    p.bot(`@${OWNER}, possiedi:\n- un sasso [C] x1`);
+    p.account.hear({
+      chat: DM,
+      sender: 'lucia_b',
+      time: p.kit.clock.now(),
+      text: `@${OWNER}, possiedi:`,
+    });
+    p.owner('ciao');
+    p.kit.runUntil(T0 + 3 * MIN);
+    p.bot(`@${OWNER}, possiedi:\n- una perla [R] x1`, { chat: DM });
+    expect(p.replies.map((e) => [e['query'], (e['reply'] as { type: string }).type])).toEqual([
+      ['/inventario C', 'inventory'],
+      ['/inventario', 'inventory'],
+      ['/dai lucia_b 3 ghianda', 'miss'],
+      [null, 'inventory'],
+    ]);
+    expect(p.replies[0]).toMatchObject({
+      chat: DM,
+      t: T0,
+      reply: {
+        type: 'inventory',
+        filtered: true,
+        items: [{ name: 'una ghianda', rarity: 'C', usable: false, qty: 3 }],
+      },
+    });
+    expect(p.replies[2]?.['reply']).toMatchObject({ owned: 2 });
+    expect(p.replies[0]?.['self']).toBe(OWNER);
   });
 
   it('runs on a saved graph as the instance runs it, on the node it had in game-bots', async () => {

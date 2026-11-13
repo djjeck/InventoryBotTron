@@ -175,7 +175,15 @@ owner's turns, on MegaBotTron1999's turn parser (its `docs/bot-os-api.md` §5), 
 `inventorybot.turn` (`{ chat, outcome }`, the outcome's shape in `src/turn.ts`), with the contract
 `state.rest` and `actions.sent` a turn-actor binds to. It came from RegnoTron's `game-bots` module
 with the same plugin id, event and store, so a graph's node keeps running on its instance
-([its changelog](modules/inventorybot/CHANGELOG.md)).
+([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome carries its drop's narrative
+(`raw`, optional, since 0.2.0), the rest of the outcome's shape unchanged for the nodes that read
+the turns of several games. Besides the turns, it publishes as `inventorybot.reply`
+(`{ chat, query, self?, reply }`) each reply of the bot's in the private chat that the player state
+reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's card, a recipe, a craft, a `/mostra`,
+a use, a gift or a give, a `/dai` refused with the count owned, a place, a Pakkomon), `reply` being
+the grammar's event read with the owner's last command there (`query`, if within the turn parser's
+answer window), which it answers. The group's replies stay the turns'. The `/esporta` file is not
+read live: the account gives the caption only.
 
 - `src/read.ts` reads a message with the grammar: whose reply it is, a gain or a cooldown, and what
   it teaches; `src/knowledge.ts` is what the instance knows, kept in its store's `knowledge`

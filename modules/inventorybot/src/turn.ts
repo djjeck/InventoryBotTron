@@ -25,6 +25,12 @@ export type InventoryOutcome =
       tags: string[];
       /** False when the item's name is a guess, its sentence and item both unknown. */
       sure: boolean;
+      /**
+       * Since 0.2.0: an adventure drop's narrative, addressee removed, which its item ends (the
+       * grammar's `raw`), from which a reader that learns more resolves a guess again; none for the
+       * lucky adventure, whose item is delimited.
+       */
+      raw?: string;
     }
   | {
       kind: 'nothing';
