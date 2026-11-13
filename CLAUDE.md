@@ -28,8 +28,9 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
 A package imports nothing outside its own folder but other packages of this repository
 (`@inventorybottron/*`): no npm package, no Node API, nothing of MegaBotTron1999, so that the wiki,
 which runs in a browser, can use it as it is. A module imports only `node:*`, `@megabottron1999/*`,
-`zod`, its own files and the modules it declares (the grammar), and no MegaBotTron1999 actor:
-nothing here plays. ESLint enforces both, and `scripts/modules.test.ts` the module format.
+`zod`, its own files and the modules it declares (the grammar, the state, by their entries), and no
+MegaBotTron1999 actor: nothing here plays. ESLint enforces both, and `scripts/modules.test.ts` the
+module format.
 
 ## Development process
 
@@ -169,22 +170,34 @@ of its player state are this package's.
 ## The inventorybot module
 
 `modules/inventorybot/`, the workspace package `@inventorybottron/inventorybot` and the module
-`inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0`), whose plugin entry
-`src/plugins/inventorybot.ts` offers the `inventorybot` parser: InventoryBot's answers to the
-owner's turns, on MegaBotTron1999's turn parser (its `docs/bot-os-api.md` §5), published as
-`inventorybot.turn` (`{ chat, outcome }`, the outcome's shape in `src/turn.ts`), with the contract
-`state.rest` and `actions.sent` a turn-actor binds to. It came from RegnoTron's `game-bots` module
-with the same plugin id, event and store, so a graph's node keeps running on its instance
-([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome carries its drop's narrative
-(`raw`, optional, since 0.2.0), the rest of the outcome's shape unchanged for the nodes that read
-the turns of several games. Besides the turns, it publishes as `inventorybot.reply`
-(`{ chat, query, self?, reply }`) each reply of the bot's in the private chat that the player state
-reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's card, a recipe, a craft, a `/mostra`,
-a use, a gift or a give, a `/dai` refused with the count owned, a place, a Pakkomon), `reply` being
-the grammar's event read with the owner's last command there (`query`, if within the turn parser's
-answer window), which it answers. The group's replies stay the turns'. The `/esporta` file is not
-read live: the account gives the caption only.
+`inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0` and
+`@inventorybottron/state` `^0.1.0`), whose plugin entry `src/plugins/inventorybot.ts` offers the
+`inventorybot` parser: InventoryBot's answers to the owner's turns, on MegaBotTron1999's turn parser
+(its `docs/bot-os-api.md` §5), published as `inventorybot.turn` (`{ chat, outcome }`, the outcome's
+shape in `src/turn.ts`), with the contract `state.rest` and `actions.sent` a turn-actor binds to. It
+came from RegnoTron's `game-bots` module with the same plugin id, event and store, so a graph's node
+keeps running on its instance ([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome
+carries its drop's narrative (`raw`, optional, since 0.2.0), the rest of the outcome's shape
+unchanged for the nodes that read the turns of several games. Besides the turns, it publishes as
+`inventorybot.reply` (`{ chat, query, self?, reply }`) each reply of the bot's in the private chat
+that the player state reads (`STATE_REPLIES` of `src/read.ts`: a listing, an item's card, a recipe,
+a craft, a `/mostra`, a use, a gift or a give, a `/dai` refused with the count owned, a place, a
+Pakkomon), `reply` being the grammar's event read with the owner's last command there (`query`, if
+within the turn parser's answer window), which it answers. The group's replies stay the turns'. The
+`/esporta` file is not read live: the account gives the caption only.
 
+- **The `inventorybot-state` plugin** (`src/plugins/inventorybot-state.ts`, its own plugin entry,
+  since 0.3.0): the owner's player state, MegaBotTron1999's `statePlugin` (its docs/bot-os-api.md
+  §5, bot-os.md D72) over the state package's `reduce`. `src/state.ts` reads the parser's events as
+  the state's: a turn's gain as a drop (a guess, `sure: false`, kept pending with its `raw`), a
+  reply as the owner's event, a `/usa`'s item and a craft's recipe found by the words of the
+  command's argument among the items held or seen and the recipes listed or made; its zod schema
+  (`stateSchema`, the package's `State`); and the freshness: a whole listing a `snapshot` of
+  `inventory`, a guess `uncertain`, any other change a `delta`. Its interface adds `count` and
+  `held`; its config's `pin` defaults to `inventory.held` and `drops.latest`. It announces
+  `inventorybot-state.changed` only: `statePlugin` publishes no other event, and its payload is
+  fixed, so what a pending drop's resolution corrected is not announced beyond the sections it
+  changed.
 - `src/read.ts` reads a message with the grammar: whose reply it is, a gain or a cooldown, and what
   it teaches; `src/knowledge.ts` is what the instance knows, kept in its store's `knowledge`
   document (at most 5000 items, 1000 prefixes and the latest 200 unknown drops); `src/drop-cut.ts`

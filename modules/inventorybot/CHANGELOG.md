@@ -3,6 +3,18 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.3.0 (2026-11-13)
+
+- **A new plugin, `inventorybot-state`**: the owner's player state, kept by MegaBotTron1999's
+  `statePlugin` from the `inventorybot` parser's `inventorybot.turn` and `inventorybot.reply`, with
+  InventoryBotTron's reducer (`@inventorybottron/state`, which the module now imports, `^0.1.0`).
+  Its sections are the package's (`owner`, `inventory`, `items`, `recipes`, `recipe_list`,
+  `inventory_check`, `locations`, `pakkomon`, `shapes`, `drops`); a whole listing is a snapshot of
+  the inventory, a guessed drop an uncertain change, kept pending and resolved in the reducer when a
+  later event teaches its item. Its interface adds `count` and `held`; its `pin` defaults to
+  `inventory.held` and `drops.latest`. Its one input, `events`, is bound to the parser's events
+  (README, "The player state"). No change to the parser.
+
 ## 0.2.0 (2026-11-13)
 
 - **A new event, `inventorybot.reply`** (`{ chat, query, self?, reply }`): each reply of the bot's

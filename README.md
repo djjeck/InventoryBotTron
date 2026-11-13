@@ -21,12 +21,44 @@ real username. What a bot knows of the game it learns by playing, into its own s
 
 On the Modules page, paste `https://github.com/djjeck/InventoryBotTron`: it lists
 `inventorybot-grammar` (at `packages/grammar`), `inventorybot-player-state` (at `packages/state`,
-which imports the grammar) and `inventorybot` (at `modules/inventorybot`, which imports the
-grammar). Install them, and restart. A module that imports `@inventorybot-wiki/grammar` must move to
+which imports the grammar) and `inventorybot` (at `modules/inventorybot`, which imports both).
+Install the three, and restart. A module that imports `@inventorybot-wiki/grammar` must move to
 `@inventorybottron/grammar` first ([its changelog](packages/grammar/CHANGELOG.md)).
 
 The `inventorybot` node reads the owner's own Telegram account (`telegram-user`): its edge reads the
 private chat with the bot, and the game's group if the owner plays there.
+
+## The player state
+
+The module's second plugin, `inventorybot-state`, keeps the owner's state at the game from what the
+`inventorybot` node reads: the inventory (each item's count, whether it is exact, its rarity and
+tags), the items seen and used, the recipes made, the places, the Pakkomon, and the latest drops. In
+the graph editor, add an `inventorybot-state` node and bind its one input, `events` (required), to
+the `inventorybot` node's events output: an `events` edge from `inventorybot.events` to
+`inventorybot-state.events`. In the graph file:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "inventorybot-state",
+      "plugin": "inventorybot-state",
+      "config": { "pin": ["inventory.held", "drops.latest"] }
+    }
+  ],
+  "edges": [{ "from": "inventorybot.events", "to": "inventorybot-state.events", "type": "events" }]
+}
+```
+
+Its config is `pin` alone, the paths of the state its panel draws first, the first two making the
+line on its card; without one it pins `inventory.held` (how many items the owner holds) and
+`drops.latest` (the latest drops). A fresh node reads the whole event log, so it starts from every
+drop and reply the parser has published. The inventory is exact after a whole `/inventario` (or
+`/collezioni`) in the private chat, and each section's freshness says how far it is from its last
+whole listing: a drop or a use is a change known exactly, a drop whose item the parser guessed an
+uncertain one, counted under its guess until a later reply teaches the item. Other nodes read it
+through its interface: `state.get({ path })`, `state.freshness({ section })`,
+`state.count({ name })` and `state.held()`.
 
 ## Seeding the parser
 

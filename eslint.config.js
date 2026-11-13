@@ -28,14 +28,16 @@ const FOREIGN_IMPORTS = {
 
 /**
  * A module has no npm dependency of its own (MegaBotTron1999's docs/bot-os-api.md §7.1): its code
- * imports only Node, MegaBotTron1999 (`@megabottron1999/*`, the host's copy), zod, the grammar
- * (`@inventorybottron/grammar`, which it declares) and its own files. `scripts/modules.test.ts`
+ * imports only Node, MegaBotTron1999 (`@megabottron1999/*`, the host's copy), zod, the grammar and
+ * the player state (`@inventorybottron/grammar`, `@inventorybottron/state`, which it declares, by
+ * their entries) and its own files. `scripts/modules.test.ts`
  * checks the same, and that each module declares the modules it imports in its `module.json`.
  */
 const MODULE_FOREIGN_IMPORTS = {
-  regex: '^(?!node:|@megabottron1999/|@inventorybottron/grammar$|zod$|#src/|#test/|\\./|vitest$)',
+  regex:
+    '^(?!node:|@megabottron1999/|@inventorybottron/(?:grammar|state)$|zod$|#src/|#test/|\\./|vitest$)',
   message:
-    'A module imports only node:*, @megabottron1999/*, zod and @inventorybottron/grammar (CLAUDE.md).',
+    'A module imports only node:*, @megabottron1999/*, zod and @inventorybottron/grammar and state, by their entries (CLAUDE.md).',
 };
 
 /** Nothing here plays: no module imports MegaBotTron1999's actors. */
