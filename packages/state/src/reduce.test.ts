@@ -43,6 +43,34 @@ describe('the reducer', () => {
     expect(s.items['un sasso']).toStrictEqual({ first_seen: at(0) });
   });
 
+  it('an_exported_inventory_is_a_full_exact_snapshot', () => {
+    // Before: an exact count, a lower bound, a count from a move only, and a guessed drop.
+    const s = run([
+      inventory([line('un sasso', 'C', 2)], 0),
+      dm({ type: 'show', qty: 2, item: 'una perla', rarity: 'R', usable: true }, 1),
+      dm({ type: 'gift', from: 'lucia_b', qty: 3, item: 'una conchiglia' }, 2),
+      drop('nel bosco trovi un dado di legno', 'dado di legno', 3, { sure: false }),
+      // The file, whatever command it is read with (none here): every item the owner has.
+      inventory([line('una perla', 'R', 5, true), line('un dado di legno', 'C', 1)], 4, '', {
+        exported: true,
+      }),
+    ]);
+    expect(qty(s)).toStrictEqual({
+      'un sasso': 0,
+      'una perla': 5,
+      'una conchiglia': 0,
+      'dado di legno': 0,
+      'un dado di legno': 1,
+    });
+    expect(Object.values(s.inventory.items).every((h) => h.exact && h.via === 'esporta')).toBe(
+      true
+    );
+    expect(s.inventory.held).toBe(2);
+    // The guess resolved by the file's name, its count not moved again on top of the file's.
+    expect(s.drops.pending).toStrictEqual([]);
+    expect(s.drops.latest.map((g) => [g.item, g.sure])).toStrictEqual([['un dado di legno', true]]);
+  });
+
   it('filters_zero_only_their_scope', () => {
     const base = inventory([line('un sasso', 'C', 2), line('una perla', 'R', 1)], 0);
     // By words, by rarity (the state's own rarities), and an "M" or a cut list, nothing.
