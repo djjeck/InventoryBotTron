@@ -26,7 +26,9 @@
  * player's reply announces, and a fight of one of their Pakkomon (`pakkomon.ts`). A drop whose item
  * is a guess (`sure: false`) is counted under its guess and kept pending: when a later event
  * teaches its item (a listing that names an item that ends it, or a sure drop of its sentence),
- * the count moves to the item (`pending.ts`).
+ * the count moves to the item (`pending.ts`). A whole inventory (the `/esporta` file, or a complete
+ * listing with no filter) settles every drop still pending: it counts them, as whatever they were,
+ * so none is resolved again after it.
  *
  * `apply` changes the state in place, for a reader that folds a whole history; `reduce` is the same
  * on a copy, pure, for one that keeps each state (MegaBotTron1999's state plugins). Pure logic only.
@@ -36,7 +38,7 @@ import { type Facts, factsOf, Holdings } from './holdings.ts';
 import { applyPakkomon } from './pakkomon.ts';
 import { learnFrom, MAX_LATEST, MAX_PENDING } from './pending.ts';
 import { ensure, own } from './records.ts';
-import { inventoryScope, isFailedUse, isMine } from './rules.ts';
+import { inventoryScope, isFailedUse, isMine, isWholeInventory } from './rules.ts';
 import { seen, shaped } from './seen.ts';
 import { type HoldingVia, type Know, type State, type StateEvent } from './types.ts';
 
@@ -112,7 +114,11 @@ export function apply(s: State, e: StateEvent, know: Know = {}): void {
   applyHoldings(s, e, k, hold);
   applyPakkomon(s, e);
   learnFrom(s, e, hold);
-  if (isMine(e, s.owner.player)) s.owner.as_of = e.date ?? null;
+  const mine = isMine(e, s.owner.player);
+  // A whole inventory counts every drop before it, so a guess it left pending is settled: its
+  // resolution later would add its item again on top of the listing's count.
+  if (mine && isWholeInventory(e)) s.drops.pending = [];
+  if (mine) s.owner.as_of = e.date ?? null;
 }
 
 /** The via of an inventory listing: the command that listed it, `/inventario` when not known. */

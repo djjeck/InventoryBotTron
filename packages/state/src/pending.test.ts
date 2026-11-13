@@ -121,6 +121,50 @@ describe('a drop whose item is a guess', () => {
     expect(s.drops.pending.map((p) => p.guess)).toStrictEqual(['una perla']);
   });
 
+  it('is_settled_by_a_whole_inventory_and_never_counted_again', () => {
+    // The item is gone by the snapshot: the export lists neither it nor the guess.
+    const after = (snapshot: StateEvent): State =>
+      run([
+        guessed(0),
+        snapshot,
+        dm({ type: 'gift', from: 'lucia_b', qty: 1, item: 'una corda di canapa' }, 10),
+      ]);
+    const exported = after(
+      inventory([line('un sasso', 'C', 2)], 5, '/esporta', { exported: true })
+    );
+    expect(exported.drops.pending).toStrictEqual([]);
+    // The gift alone: the drop is the snapshot's, not counted again on resolution.
+    expect(qty(exported)).toStrictEqual({ canapa: 0, 'un sasso': 2, 'una corda di canapa': 1 });
+    const listed = after(inventory([line('un sasso', 'C', 2)], 5));
+    expect(qty(listed)).toStrictEqual(qty(exported));
+    expect(listed.drops.pending).toStrictEqual([]);
+    // A filtered or cut listing leaves the guess pending, and the gift resolves it.
+    for (const partial of [
+      inventory([line('un sasso', 'C', 2)], 5, '/inventario sasso'),
+      inventory([line('un sasso', 'C', 2)], 5, '/inventario', { truncated: true }),
+    ]) {
+      const s = run([guessed(0), partial]);
+      expect(s.drops.pending.map((p) => p.guess)).toStrictEqual(['canapa']);
+    }
+    // Another player's whole listing settles nothing of the owner's.
+    const theirs = run([
+      guessed(0),
+      {
+        type: 'inventory',
+        filtered: false,
+        truncated: false,
+        items: [],
+        player: 'lucia_b',
+        query: '/inventario',
+        date: at(5),
+      },
+    ]);
+    expect(theirs.drops.pending).toHaveLength(1);
+    // Drops after the snapshot stay pending.
+    const later = run([inventory([line('un sasso', 'C', 2)], 5), guessed(6)]);
+    expect(later.drops.pending).toHaveLength(1);
+  });
+
   it('keeps_at_most_its_bound', () => {
     const s = run(Array.from({ length: MAX_PENDING + 3 }, (_, i) => guessed(i)));
     expect(s.drops.pending).toHaveLength(MAX_PENDING);

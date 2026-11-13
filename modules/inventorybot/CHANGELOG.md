@@ -3,6 +3,13 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.4.2 (2026-11-13)
+
+- It imports the player state `^0.1.1`, in which a whole inventory (now the `/esporta` file too)
+  settles the drops still pending, so that a guess resolved after it is not counted twice
+  (InventoryBotTron's issue #1). Update `inventorybot-player-state` with it. No change to the
+  plugins.
+
 ## 0.4.1 (2026-11-13)
 
 - **The `/esporta` file is read live.** MegaBotTron1999 0.1.7's Telegram connectors download a

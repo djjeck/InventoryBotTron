@@ -155,7 +155,9 @@ entry, `src/index.ts`, is its contract:
   estimate), `locations` (visited, adventures), `pakkomon`, `shapes`, and `drops`: the latest drops,
   and those whose item is a guess, kept pending with their narrative until an event teaches the item
   (a listing that names an item that ends it, or a sure drop of its sentence), when the count moves
-  from the guess to the item inside the reducer (`pending.ts`).
+  from the guess to the item inside the reducer (`pending.ts`); a whole inventory (the `/esporta`
+  file, or a complete listing with no filter) settles every drop still pending, since it counts
+  them, so that none is counted again when a later event would have resolved it (since 0.1.1).
 - `playerView(state, places?)`: the state as the wiki shows it (`PlayerView`), a shaped item and
   every Pakkomon merged, holdings above zero, sorted.
 - The rules the wiki's phase 5 shares with it: `isMine`, `queryArg`, `inventoryScope`,
@@ -171,7 +173,7 @@ of its player state are this package's.
 
 `modules/inventorybot/`, the workspace package `@inventorybottron/inventorybot` and the module
 `inventorybot` (`module.json`, imports `@inventorybottron/grammar` `^0.4.0` and
-`@inventorybottron/state` `^0.1.0`), whose plugin entry `src/plugins/inventorybot.ts` offers the
+`@inventorybottron/state` `^0.1.1`), whose plugin entry `src/plugins/inventorybot.ts` offers the
 `inventorybot` parser: InventoryBot's answers to the owner's turns, on MegaBotTron1999's turn parser
 (its `docs/bot-os-api.md` §5), published as `inventorybot.turn` (`{ chat, outcome }`, the outcome's
 shape in `src/turn.ts`), with the contract `state.rest` and `actions.sent` a turn-actor binds to. It

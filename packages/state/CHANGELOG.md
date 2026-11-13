@@ -3,6 +3,15 @@
 The module's version follows its entry's API (`src/index.ts`), not any repository's releases
 (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.1.1 (2026-11-13)
+
+- **A whole inventory settles the drops still pending** (issue #1): the `/esporta` file, or a
+  complete `/inventario` (or `/collezioni`, or a lone `/inv2` page) with no filter, counts every
+  drop before it, as whatever item it was, so a guess it left pending (its item no longer held,
+  neither it nor the guess listed) is dropped from `drops.pending`. Until now a later gift or drop
+  of that item resolved it, and added the drop's 1 on top of the listing's count. Its gain in
+  `drops.latest` keeps its guess. No change to the API.
+
 ## 0.1.0 (2026-11-13)
 
 - **The player state, extracted from the InventoryBot wiki** (its `src/inventorybot/player.ts` and

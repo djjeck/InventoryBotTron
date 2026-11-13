@@ -69,6 +69,9 @@ export type RarityOf = (name: string) => string | null | undefined;
 /** The fields `inventoryScope` reads of an event. */
 export type Listing = Event & { query?: string | null | undefined };
 
+/** The scope of a whole inventory: every item. */
+const EVERY_ITEM = (): boolean => true;
+
 /**
  * Which unlisted items an inventory reply proves the player does not have: a predicate on item
  * names (every one for the `/esporta` file), or null when the reply says nothing about unlisted
@@ -77,13 +80,13 @@ export type Listing = Event & { query?: string | null | undefined };
  */
 export function inventoryScope(e: Listing, rarityOf: RarityOf): ((name: string) => boolean) | null {
   if (e.type !== 'inventory' || e.truncated) return null;
-  if (e.exported) return () => true;
+  if (e.exported) return EVERY_ITEM;
   if (e.query === null || e.query === undefined) return null;
   // /collezioni and /inv2 list everything; nothing is known of what they do with an argument.
   const list = queryArg(e.query, ...INVENTORY_LIST_COMMANDS);
-  if (list !== null) return list === '' ? () => true : null;
+  if (list !== null) return list === '' ? EVERY_ITEM : null;
   const raw = stripWs(queryArg(e.query, ...INVENTORY_COMMANDS) || '');
-  if (!raw) return () => true;
+  if (!raw) return EVERY_ITEM;
   if (raw === 'M' || raw === 'm') return null;
   if (RARITY_FILTER.test(raw)) {
     const arg = raw.toUpperCase();
@@ -100,6 +103,14 @@ export function inventoryScope(e: Listing, rarityOf: RarityOf): ((name: string) 
     const lower = n.toLowerCase();
     return words.every((w) => lower.includes(w));
   };
+}
+
+/**
+ * Whether an inventory reply lists the whole inventory (its scope is every item): the `/esporta`
+ * file, or a complete listing with no filter.
+ */
+export function isWholeInventory(e: Listing): boolean {
+  return inventoryScope(e, () => undefined) === EVERY_ITEM;
 }
 
 /** `/usa` replies where the use failed for a reason worth keeping (a requirement). */
