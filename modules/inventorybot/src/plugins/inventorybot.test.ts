@@ -36,7 +36,7 @@ describe('the inventorybot parser', () => {
     expect(m.events?.['inventorybot.craft']?.description).toBe(
       'A recipe made: the ingredients spent and the item made'
     );
-    expect(Object.keys(m.interface.state ?? {})).toEqual(['rest']);
+    expect(Object.keys(m.interface.state ?? {})).toEqual(['rest', 'lastTurn']);
     expect(Object.keys(m.interface.actions ?? {})).toEqual(['sent', 'seed']);
     expect(m.config).toBeUndefined();
   });

@@ -19,7 +19,7 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
   `src/inventorybot/player.ts` and `player-pakkomon.ts`, made a reducer of one event at a time.
 - `modules/inventorybot/`: the MegaBotTron1999 module `inventorybot`, with the `inventorybot` parser
   plugin (below, "The inventorybot module").
-- `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.16`), whose
+- `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag (`v0.1.21`), whose
   `packages/*` are workspaces, so that the modules are written, type-checked and tested against the
   shell they run in (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the shell is
   made in its repository, and the pin is moved here (with `npm install` for the lockfile) in a
@@ -183,7 +183,8 @@ of its player state are this package's.
 `@inventorybottron/state` `^0.2.0`), whose plugin entry `src/plugins/inventorybot.ts` offers the
 `inventorybot` parser: InventoryBot's answers to the owner's turns, on MegaBotTron1999's turn parser
 (its `docs/bot-os-api.md` §5), published as `inventorybot.turn` (`{ chat, outcome }`, the outcome's
-shape in `src/turn.ts`), with the contract `state.rest` and `actions.sent` a turn-actor binds to. It
+shape in `src/turn.ts`), with the contract `state.rest`, `state.lastTurn` and `actions.sent` a
+turn-actor binds to (`state.lastTurn` the turn parser's since MegaBotTron1999 0.1.21, its D99). It
 came from RegnoTron's `game-bots` module with the same plugin id, event and store, so a graph's node
 keeps running on its instance ([its changelog](modules/inventorybot/CHANGELOG.md)). A gain's outcome
 carries its drop's narrative (`raw`, optional, since 0.2.0), the rest of the outcome's shape
