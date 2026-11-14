@@ -3,6 +3,16 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.8.0 (2026-11-14)
+
+- **A line in the owner's summary.** The `inventorybot-state` node adds, after the state plugin's
+  `N events applied`, what it told gained since the last summary, `N items gained, M new` (`M` the
+  items held for the first time, `qty` 1; `, M new` left out at 0), and nothing when it told no
+  gain, so a quiet window sends no summary. Its `gained` events are live gains only, so neither the
+  catch-up at start nor a message played back counts. Kept in memory: a restart forgets the counts.
+  Built against MegaBotTron1999 0.1.16; it needs 0.1.15 or later (its summary hook and `Tally`,
+  D92). No edge, config or event changes.
+
 ## 0.7.0 (2026-11-13)
 
 - **The parser resolves the owner's guesses, not the state** (breaking for the state's shape). The

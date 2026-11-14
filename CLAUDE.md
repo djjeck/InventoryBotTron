@@ -241,6 +241,13 @@ recognises each), for MegaBotTron1999's coming command answers (its issue #59).
   resolved) flows from the parser to the state only: the state applies it (and `changed` tells the
   sections it changed, as for any event), but tells it in no event of its own, neither a `gained`
   nor a `resolved`. A script that needs corrections listens to the parser's `inventorybot.resolved`.
+- **Its line in the owner's summary** (since 0.8.0, MegaBotTron1999's D92, `summaryLines`): beside
+  the state plugin's `N events applied`, `N items gained, M new` for the summary's window, `N` its
+  `gained` events published, `M` those with `qty` 1 (held for the first time), `, M new` left out at
+  0; none when it told no gain, so that a quiet window sends no summary. The plugin wraps the state
+  plugin's `create`, counting its `gained` events as its bus publishes them (a `Tally`, in memory
+  only) and joining its line to the state plugin's in one contribution, so that the node has one
+  section.
 - **`inventorybot-state.gained`** (`src/gains.ts`, `gains(before, after, event)`):
   `{ item: string, sure: boolean, qty: number, exact: boolean }`, one per item the owner gained by
   an event, `qty` and `exact` the item's holding after it (`after.inventory.items[item]`; 0 and

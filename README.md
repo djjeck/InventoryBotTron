@@ -79,6 +79,10 @@ catches up on at start, nor of a message the account caught up on after downtime
 node's events input to the `inventorybot-state` node's events output (the namespace
 `inventorybot-state`) and react to `inventorybot-state.gained`.
 
+The owner hears it too, without a script: in MegaBotTron1999's periodic summary (its `owner-notice`
+node), the `inventorybot-state` node adds a line of what it told gained since the last summary,
+`N items gained, M new` (new: items held for the first time), and nothing when it told no gain.
+
 ## Seeding the parser
 
 The `inventorybot` node starts knowing nothing of the game, and is sure of a drop's item only once

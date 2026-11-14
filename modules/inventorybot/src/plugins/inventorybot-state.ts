@@ -24,12 +24,25 @@
  *   what a `/usa` gave), `{ item, sure, qty, exact }`, told live only (`src/gains.ts`). A state
  *   plugin offers rich domain events, so that the owner writes a small script on the fly ("when I
  *   find X, …") instead of comparing states.
+ * - **The owner's summary** (since 0.8.0, MegaBotTron1999's D92): beside the state plugin's
+ *   `N events applied`, a line of what it told since the last summary, `N items gained, M new`
+ *   (`summaryLines`): the `gained` events published (live gains only, as they are), new the
+ *   items held for the first time (`qty` 1), `, M new` left out at 0; no line when it told none.
+ *   Counted in memory only: a restart forgets them.
  *
  * It never sends, and announces each change as `inventorybot-state.changed`, the sections changed;
  * an event its reducer refuses is recorded as `inventorybot-state.refused`.
  */
 import { initialState, reduce, type State } from '@inventorybottron/state';
-import { type MigrationStore, type Plugin } from '@megabottron1999/core';
+import {
+  counted,
+  type MigrationStore,
+  type Plugin,
+  type PluginContext,
+  type SummaryLines,
+  type SummaryWindow,
+  Tally,
+} from '@megabottron1999/core';
 import { STATE_DOC, statePlugin } from '@megabottron1999/turns/state-plugin.ts';
 import { z } from 'zod';
 import { gainedSchema, gains } from '#src/gains.ts';
@@ -109,9 +122,57 @@ const config = (base.manifest.config as z.ZodObject<{ pin: z.ZodDefault<z.ZodArr
     ),
 });
 
+/** Its `gained` events, as its bus publishes them. */
+const GAINED = `${INVENTORYBOT_STATE}.gained`;
+
+/**
+ * Its line in the owner's summary for a window (D92): the items it told gained, and of them those
+ * new (held for the first time, `qty` 1), counted as `gained` and `new` in `tally`; none when it
+ * told none, so that a quiet window adds nothing.
+ */
+export function summaryLines(tally: Tally, w: SummaryWindow): string[] {
+  const gained = tally.count('gained', w);
+  if (gained === 0) return [];
+  const fresh = tally.count('new', w);
+  return [`${counted(gained, 'item')} gained${fresh > 0 ? `, ${fresh} new` : ''}`];
+}
+
+/**
+ * Its node: the state plugin's, with its gains counted as they are published, and its own line
+ * added to the state plugin's in the owner's summary (one section, its node's).
+ */
+const create = (ctx: PluginContext): ReturnType<Plugin['create']> => {
+  const tally = new Tally(ctx.clock);
+  const bus: PluginContext['bus'] = {
+    ...ctx.bus,
+    publish: (type, payload, t) => {
+      if (type === GAINED) {
+        tally.add('gained');
+        if (payload['qty'] === 1) tally.add('new');
+      }
+      ctx.bus.publish(type, payload, t);
+    },
+  };
+  const summary = ctx.summary;
+  return base.create({
+    ...ctx,
+    bus,
+    ...(summary === undefined
+      ? {}
+      : {
+          summary: {
+            ...summary,
+            contribute: (lines: SummaryLines) =>
+              summary.contribute((w) => [...(lines(w) ?? []), ...summaryLines(tally, w)]),
+          },
+        }),
+  });
+};
+
 export const inventorybotStatePlugin: Plugin = {
   ...base,
   manifest: { ...base.manifest, config },
+  create,
 };
 
 /** The module's plugin entry (MegaBotTron1999's docs/bot-os-api.md §7.2). */

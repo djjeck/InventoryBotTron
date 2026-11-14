@@ -94,6 +94,16 @@ flows from the parser to the state: the state moves the drop's count from the gu
 `changed` tells the sections it changed, but it tells no `gained` again and no event of its own for
 it. A script that needs corrections listens to the parser's `inventorybot.resolved`.
 
+## The owner's summary
+
+Since 0.8.0, the `inventorybot-state` node adds a line to the owner's periodic summary
+(MegaBotTron1999's `owner-notice`, its D92), under its node's id, after the state plugin's own
+`N events applied`: what it told gained since the last summary, `N items gained, M new`, `N` its
+`gained` events (live gains only: none from the catch-up at start or a message played back), `M`
+those of an item held for the first time (`qty` 1), `, M new` left out when none is. When it told no
+gain, it adds no line, so a quiet window sends no summary. The counts live in memory: a restart
+forgets them.
+
 ## Refusals
 
 MegaBotTron1999 will offer a command's answer as a primitive of its own (its issue #59: ok, refused

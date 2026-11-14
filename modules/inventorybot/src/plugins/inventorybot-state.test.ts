@@ -222,7 +222,34 @@ describe('the inventorybot-state node', () => {
     const again = await bootState(dir, { at: T0 + 10 * MIN });
     expect(held(again)).toMatchObject({ 'un sasso': 4 });
     expect(again.of('inventorybot-state.gained')).toEqual([]);
+    // Nor counts it in the owner's summary.
+    expect(again.core.summary({ since: T0, until: T0 + 11 * MIN })).toEqual([]);
     await again.core.stop();
+  });
+
+  it('adds what it told gained to the owner’s summary, and nothing when it told nothing', async () => {
+    const run = await bootState(dir);
+    const lines = (since: number, until: number) =>
+      run.core.summary({ since, until }).find((x) => x.node === 'inventorybot-state')?.lines;
+    await run.owner('/inventario');
+    await run.bot(`@${OWNER}, possiedi:\n- un sasso [C] x2`);
+    // Applied, but nothing gained: the state plugin's line alone.
+    expect(lines(T0, T0 + 1)).toEqual(['1 event applied']);
+    run.clock.advance(MIN);
+    // A known item (3 now), a guess (new) and a gift (new); a played back gift, told to nobody.
+    await run.bot(`@${OWNER}, ${S}un sasso [C]!`);
+    await run.bot(`@${OWNER}, ${S2}${STECCO} [N]!`);
+    await run.bot('[N] @lucia_b ti ha dato 1x una perla');
+    await run.bot('[N] @lucia_b ti ha dato 1x una conchiglia', { playback: true });
+    expect(lines(T0 + MIN, T0 + 2 * MIN)).toEqual(['4 events applied', '3 items gained, 2 new']);
+    run.clock.advance(MIN);
+    // None new: their count left out.
+    await run.bot(`@${OWNER}, ${S}un sasso [C]!`);
+    expect(lines(T0 + 2 * MIN, T0 + 3 * MIN)).toEqual(['1 event applied', '1 item gained']);
+    expect(lines(T0, T0 + 3 * MIN)).toEqual(['6 events applied', '4 items gained, 2 new']);
+    // A window where nothing happened: no section, so no summary.
+    expect(run.core.summary({ since: T0 + 3 * MIN, until: T0 + 4 * MIN })).toEqual([]);
+    await run.core.stop();
   });
 
   it('resumes from its cursor after a restart, each event applied once', async () => {
