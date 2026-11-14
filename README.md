@@ -28,9 +28,11 @@ Install the three, and restart. A module that imports `@inventorybot-wiki/gramma
 The `inventorybot` node reads the owner's own Telegram account (`telegram-user`): its edge reads the
 private chat with the bot, and the game's group if the owner plays there. It publishes the owner's
 adventures as `inventorybot.turn`, and each private reply as an event of its kind
-(`inventorybot.inventory`, `inventorybot.craft`, `inventorybot.itemInfo`, …): every event, its
-fields, and the bot's replies that refuse a command are in the module's
-[README](modules/inventorybot/README.md).
+(`inventorybot.inventory`, `inventorybot.craft`, `inventorybot.itemInfo`, …), and these events
+answer the owner's commands (since 0.9.0, which needs MegaBotTron1999 0.1.21 or later): a script
+that sends a command through the owner's account learns whether the bot did it or refused it, and
+why. Every event, its fields, the command answers and the bot's replies that refuse a command are in
+the module's [README](modules/inventorybot/README.md).
 
 ## The player state
 

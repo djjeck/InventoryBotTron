@@ -208,7 +208,24 @@ the state, and its items learned as an inventory's; a file that came without its
 leaves the caption alone, which tells nothing, and is logged with why. The module's
 [README](modules/inventorybot/README.md) is its event surface: every event and its fields, and the
 catalogue of the bot's replies that refuse a command (their reason, and whether the grammar
-recognises each), for MegaBotTron1999's coming command answers (its issue #59).
+recognises each), and the command answers built on it.
+
+- **Its events answer the owner's commands** (since 0.9.0, `src/answers.ts`; MegaBotTron1999's
+  command answers, its #59 and D98, which need its 0.1.21): the manifest's `answers`, the turn
+  parser's own first (`inventorybot.turn` answers `/avventura`), then which reply event answers
+  which commands, `ok` or `refused` with a reason (MegaBotTron1999's `cooldown`, `missing`,
+  `invalid`, or the game's own: `not_found`, `ambiguous`, `untrusted`, `closed`, `restricted`,
+  `error`), the bot's fixed replies (`inventorybot.miss`) one by one by their `reply`
+  (`MISS_ANSWERS`). The core pairs an event with a waiting send only while it hands the parser the
+  message, so every event is published in the message's handler, never after an `await`. The first
+  declaration that matches an event is its answer, whatever command waits, so each event (and its
+  `when`) is declared once with every command it answers; where a status depends on the reply, the
+  parser adds the field it reads (`src/replies.ts`, `answerFields`: `retryAt` of an item's cooldown
+  and a stunned Pakkomon, `failed` of a use, `examined` of a recipe's detail), which the state
+  leaves out (`CONTEXT_FIELDS`). A cooldown of an item or a Pakkomon gives no `retryAtFrom`: the
+  core would hold the whole command back. A command sent by a node is never seen by the parser (the
+  account does not hear its own sends), so a reply the grammar reads only with its command (most
+  `/usa` replies) goes unanswered then.
 
 - **The parser resolves the owner's guesses** (since 0.7.0, `src/knowledge.ts`, `src/resolved.ts`):
   it keeps the owner's drops whose item it guessed (at most 50, in its `knowledge` document), and

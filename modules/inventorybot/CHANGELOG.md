@@ -3,6 +3,29 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.9.0 (2026-11-14)
+
+- **Command answers.** The parser declares which of its events answer which of the owner's commands
+  (MegaBotTron1999's command answers, its #59 and D98: its manifest's `answers`), so that a node
+  that sends a command to the bot's private chat (a script's `await enqueue(…)`) learns whether the
+  bot did it or refused it, and why: a listing, a card, a recipe, a craft, a `/mostra`, a `/dai`, a
+  `/usa`, a `/viaggio` and the Pakkomon replies answer theirs `ok`; a recipe's missing ingredients,
+  a failed use, a blocked `/viaggio`, an item's cooldown, a stunned Pakkomon and the bot's fixed
+  refusals (`inventorybot.miss`, by their `reply`) answer `refused` with a reason (`missing`,
+  `not_found`, `ambiguous`, `invalid`, `cooldown`, `untrusted`, `closed`, `restricted`, `error`);
+  the turn parser's own answers to `/avventura` come first, unchanged. The module's README has the
+  whole table. An item's cooldown and a stunned Pakkomon give no `retryAt` to the answer (it would
+  hold every `/usa` back): their time is in the event.
+- **New fields** (added, nothing removed): `inventorybot.itemCooldown` and
+  `inventorybot.pakkomonStunned` carry `retryAt` (ms), `inventorybot.use` `failed`, and
+  `inventorybot.recipeDetail` `examined` (an `/esamina`'s, not a `/ricetta` refused). The state
+  ignores them.
+- **Needs MegaBotTron1999 0.1.21 or later** (built against 0.1.21): an older shell refuses the
+  manifest's `answers` key, and the plugin with it. Its turn parser's contract there is
+  `state.rest`, `state.lastTurn` and `actions.sent` (D99): a turn actor bound to the node needs no
+  rebinding, and the chat-in edge an older graph gave the actor is dropped as the graph loads. No
+  edge, config or event of this module's changes.
+
 ## 0.8.0 (2026-11-14)
 
 - **A line in the owner's summary.** The `inventorybot-state` node adds, after the state plugin's

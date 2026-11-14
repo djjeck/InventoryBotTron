@@ -14,8 +14,10 @@ editor and a script's types know its fields.
 
 ### The turns: `inventorybot.turn`
 
-`{ chat, outcome, playback? }`: what the bot answered to one of the owner's adventures, in the
-private chat or a group the edge reads. Its `outcome` is the shape every game bot's parser shares:
+`{ chat, outcome, retryAt?, playback? }`: what the bot answered to one of the owner's adventures, in
+the private chat or a group the edge reads; `retryAt` (ms, with MegaBotTron1999 0.1.21 or later) the
+end of the rest it starts, when the next adventure may go. Its `outcome` is the shape every game
+bot's parser shares:
 
 - `{ kind: 'gain', bot, item, rarity, tags, sure, raw? }`: a drop addressed to the owner, or the
   lucky adventure's prize; `sure` false when the item is a guess (its sentence and item both
@@ -49,6 +51,13 @@ carries the reply's context, then the grammar's fields, flat:
 - `self`: the owner's username, once the account knows it;
 - `playback: true`: read from a message played back (missed while the instance was down), history
   and not news.
+
+Since 0.9.0, a few kinds carry what the command answers (below) read besides the grammar's fields:
+`inventorybot.itemCooldown` and `inventorybot.pakkomonStunned` their `retryAt` (ms: when the item
+may be used or given again, the wait stated plus its smallest unit, since the bot truncates it; when
+the Pakkomon recovers), `inventorybot.use` its `failed` (the use failed for a requirement it lacks:
+the state's `isFailedUse`), `inventorybot.recipeDetail` its `examined` (it answers an `/esamina` of
+the recipe, `per fare la ricetta …`, rather than refusing a `/ricetta`, `per fare …`).
 
 | Event                            | The reply                                                                     |
 | -------------------------------- | ----------------------------------------------------------------------------- |
@@ -104,13 +113,73 @@ those of an item held for the first time (`qty` 1), `, M new` left out when none
 gain, it adds no line, so a quiet window sends no summary. The counts live in memory: a restart
 forgets them.
 
+## Command answers
+
+Since 0.9.0 (MegaBotTron1999 0.1.21 or later: its command answers, its issue #59 and D98), the
+parser's events answer the owner's commands: a node that sends one to the bot's private chat through
+the owner's account (a script's `const a = await enqueue(…)`) learns what the bot said to it,
+`{ status: 'ok' | 'refused' | 'unanswered', reason?, retryAt?, event? }`, `event` the parser's event
+that answered (`a.event.reply`, `a.event.retryAt`, …). The core pairs an event with the oldest send
+of a command it answers still waiting in that chat (two minutes at most, then `unanswered`); an
+event read from a message played back answers nothing. The first line that matches an event is its
+answer:
+
+| Command                                                               | Event (when)                                                                            | Answer                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
+| `/avventura`                                                          | `inventorybot.turn` (`nothing`, `cooldown`)                                             | refused, `cooldown`, `retryAt`     |
+| `/avventura`                                                          | `inventorybot.turn` (a gain)                                                            | ok, `rest`, `retryAt`              |
+| `/inventario`, `/inventory`, `/i`, `/collezioni`, `/inv2`, `/esporta` | `inventorybot.inventory`                                                                | ok                                 |
+| `/titolo`                                                             | `inventorybot.title`                                                                    | ok                                 |
+| `/esamina`                                                            | `inventorybot.itemInfo`                                                                 | ok                                 |
+| `/esamina`                                                            | `inventorybot.recipeDetail` (`examined`)                                                | ok                                 |
+| `/ricetta`                                                            | `inventorybot.recipeDetail` (otherwise: ingredients missing)                            | refused, `missing`                 |
+| `/ricetta`                                                            | `inventorybot.recipeList`, `inventorybot.craft`                                         | ok                                 |
+| `/mostra`                                                             | `inventorybot.show`                                                                     | ok                                 |
+| `/dai`                                                                | `inventorybot.give`                                                                     | ok                                 |
+| `/usa`                                                                | `inventorybot.use` (`failed`)                                                           | refused, `missing`                 |
+| `/usa`                                                                | `inventorybot.use` (otherwise)                                                          | ok                                 |
+| `/viaggio`                                                            | `inventorybot.travel`, `inventorybot.location`                                          | ok                                 |
+| `/viaggio`                                                            | `inventorybot.travelBlocked`                                                            | refused, `missing`                 |
+| `/usa`, `/dai`                                                        | `inventorybot.itemCooldown`                                                             | refused, `cooldown` (no `retryAt`) |
+| `/usa`                                                                | `inventorybot.pakkomonStunned`                                                          | refused, `cooldown` (no `retryAt`) |
+| `/usa`                                                                | `inventorybot.pakkomonRecord`, `.pakkomonReady`, `.pakkomonChallenge`, `.pakkomonFight` | ok                                 |
+| as the table of refusals below says                                   | `inventorybot.miss`, by its `reply`                                                     | refused, with its reason, or ok    |
+
+The reasons are MegaBotTron1999's where one fits, else the game's own: `cooldown`; `missing` (the
+owner lacks what the command needs: the item, enough of it, the ingredients, the key, the item a
+place requires; `item_not_owned`, `use_not_owned`, `use_target_not_owned`, `use_wrong_key`,
+`examine_not_found`, `recipe_not_found`, `no_recipes`, `dai_not_enough`, `pakkomon_gone`);
+`not_found` (no such player, place or target: `dai_unknown_user`, `stats_unknown_user`,
+`place_not_found`, `use_target_unknown`); `ambiguous` (`examine_ambiguous`, `recipe_ambiguous`,
+`item_ambiguous`, `place_ambiguous`); `invalid` (`dai_syntax`, `dai_bad_quantity`, `examine_what`,
+`use_what`, `use_not_usable`, `inventory_bad_filter`, `argument_length`); `untrusted`
+(`dai_untrusted`, `dai_doubtful`); `closed` (`lottery_none`); `restricted` (`register_first`,
+`restricted`, `captcha`, `username_locked`, `game_moved`); `error` (`error`). The fixed replies that
+answer any command (`argument_length`, `restricted`'s, `error`) answer each of the bot's. Fixed
+replies that are the command's answer are `ok`: `faq` (`/faq`, `/start`, `/help`), `welcome`
+(`/start`, `/registrami`), `commands` (`/faqcomandi`), `groups` (`/gruppi`), `leaderboards`
+(`/stats`), `hidden_recipes`, `hide_recipe`, `unhide_recipe` (`/nascondi`), `favourite`
+(`/preferito`), `quest_none` (`/quest`), `pakkomon_stop` (`/usa`).
+
+- **An item's cooldown, a stunned Pakkomon:** refused with `cooldown`, the time in the event
+  (`a.event.retryAt`), but not as the answer's `retryAt`: that would hold every `/usa` (or `/dai`)
+  back in the chat until then, hours for some items, while the wait is the item's or the Pakkomon's.
+  A node refused again and again for them is backed off by MegaBotTron1999's retry-loop guard (three
+  in a row) instead.
+- **What answers nothing:** a gift (another player's), the side notice of an item a place on the way
+  back requires (`travelRequirement`), the lottery's announcements, a reply the grammar does not
+  recognise (the command is `unanswered`), and the `/esporta` caption whose file did not come.
+- **A command the parser does not see:** the account never sees the messages it sends itself, so the
+  parser knows only the commands the owner types (`query`). A reply whose reading needs the command
+  (most `/usa` replies, a narrated `/viaggio` arrival) is not recognised after a command sent by a
+  node, and that command is `unanswered`: its refusals by fixed replies, its cooldowns and its
+  Pakkomon replies are answered, a `/usa`'s other replies are not.
+
 ## Refusals
 
-MegaBotTron1999 will offer a command's answer as a primitive of its own (its issue #59: ok, refused
-with a reason, or a cooldown until a time). Until then, these are the bot's replies that refuse a
-command, by what they say, and how the parser reads each. "Recognised" means the grammar reads the
-reply as the event named; none of them changes the owner's items, but a `/dai` refused with the
-count owned, which the state takes as that item's exact count.
+These are the bot's replies that refuse a command, by what they say, and how the parser reads each.
+"Recognised" means the grammar reads the reply as the event named; none of them changes the owner's
+items, but a `/dai` refused with the count owned, which the state takes as that item's exact count.
 
 | Command                | Refused because                                                     | Read as                                                                       |
 | ---------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |

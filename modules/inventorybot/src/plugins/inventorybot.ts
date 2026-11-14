@@ -18,6 +18,10 @@
  *   why. A reply read from a message played back is marked `playback: true` (since 0.4.0), as the
  *   turn parser marks its turns: a state applies it and announces nothing of it. A turn's `gain`
  *   carries its drop's narrative (`raw`).
+ * - Its events answer the owner's commands (MegaBotTron1999's command answers, D98, since 0.9.0):
+ *   the turn parser's `inventorybot.turn` the adventures, and the replies the other commands, as
+ *   `src/answers.ts` declares. The core pairs an event with a command only while it hands the
+ *   parser a message, so every reply is published in the message's handler, never later.
  * - The owner's drops whose item it guessed are kept, and resolved by what it learns since, from
  *   any message it reads (any player's, in any chat, played back or not) or a seed: each told as
  *   `inventorybot.resolved` (`src/resolved.ts`, since 0.7.0), before the reply that taught it. A
@@ -37,9 +41,10 @@ import {
   type TurnReading,
 } from '@megabottron1999/turns/turn-parser.ts';
 import { z } from 'zod';
+import { ANSWERS } from '#src/answers.ts';
 import { InventoryKnowledge, seedSchema } from '#src/knowledge.ts';
 import { readInventoryBot, readStateReply } from '#src/read.ts';
-import { REPLY_SCHEMAS, replyEvent, replyPayload } from '#src/replies.ts';
+import { answerFields, REPLY_SCHEMAS, replyEvent, replyPayload } from '#src/replies.ts';
 import { RESOLVED_EVENT, resolvedPayload, resolvedSchema } from '#src/resolved.ts';
 import { INVENTORYBOT, type InventoryOutcome, TURN_COMMANDS } from '#src/turn.ts';
 
@@ -60,6 +65,8 @@ export const inventorybotPlugin: Plugin = {
   manifest: {
     ...base,
     events: { ...base.events, ...REPLY_SCHEMAS, [RESOLVED_EVENT]: resolvedSchema },
+    // The turn parser's answers to /avventura, then the replies' (`src/answers.ts`, since 0.9.0).
+    answers: [...(base.answers ?? []), ...ANSWERS],
     interface: {
       ...base.interface,
       actions: {
@@ -126,9 +133,14 @@ export const inventorybotPlugin: Plugin = {
       // A whole inventory counts every drop before it, as whatever it was: a guess older than it is
       // never corrected after it, or its item would be counted twice (issue #1).
       if (isWholeInventory({ ...reply, query })) known.forget(m.time);
+      // Published in the handler, as the core hands it the message: so that the core pairs it
+      // with the command it answers (MegaBotTron1999's D98), as it does the turns.
       ctx.bus.publish(
         replyEvent(reply.type),
-        replyPayload(reply, { chat: m.chat, query, self: chat.self(), playback: m.playback }),
+        {
+          ...replyPayload(reply, { chat: m.chat, query, self: chat.self(), playback: m.playback }),
+          ...answerFields(reply, m.text, m.time),
+        },
         m.time
       );
     });

@@ -6,6 +6,7 @@
 import { TELEGRAM_USER } from '@megabottron1999/connectors/plugins/telegram-user.ts';
 import {
   type BusEvent,
+  definePlugin,
   DevKit,
   FakeConnector,
   fakeConnectorPlugin,
@@ -19,8 +20,24 @@ export const OWNER = 'mario_r';
 export const DM = '@InventoryBot';
 export const GROUP = '-1001000000001';
 
-/** The parser, its edge reading the group too; `documents`, what its store starts with. */
-export async function runParser(documents?: Record<string, unknown>) {
+/** A node that sends commands to the bot's private chat, as a script does: `outbox('chat')`. */
+export const SENDER = 'sender';
+const senderPlugin = definePlugin({
+  manifest: {
+    id: SENDER,
+    version: '0.1.0',
+    kinds: ['actor'],
+    description: 'sends the owner’s commands',
+    outputs: { chat: { type: 'chat-out', network: 'telegram' } },
+  },
+  create: () => ({}),
+});
+
+/**
+ * The parser, its edge reading the group too; `documents`, what its store starts with. With
+ * `sender`, a node (`SENDER`) whose live edge sends to the private chat with the bot.
+ */
+export async function runParser(documents?: Record<string, unknown>, o: { sender?: boolean } = {}) {
   const plugin = inventorybotPlugin;
   const id = plugin.manifest.id;
   const account = new FakeConnector({ account: `telegram:${OWNER}` });
@@ -29,13 +46,31 @@ export async function runParser(documents?: Record<string, unknown>) {
   const lines: string[] = [];
   const kit = new DevKit({
     start: T0,
-    plugins: [fakeConnectorPlugin(TELEGRAM_USER, account), plugin],
+    plugins: [
+      fakeConnectorPlugin(TELEGRAM_USER, account),
+      plugin,
+      ...(o.sender === true ? [senderPlugin] : []),
+    ],
     ...(documents === undefined ? {} : { documents: { [id]: documents } }),
     graph: (defaults) => ({
       ...defaults,
-      edges: defaults.edges.map((e) =>
-        e.to !== `${id}.chat` ? e : { ...e, reads: [...(e.reads as string[]), GROUP] }
-      ),
+      edges: [
+        ...defaults.edges
+          .filter((e) => e.from !== `${SENDER}.chat`)
+          .map((e) =>
+            e.to !== `${id}.chat` ? e : { ...e, reads: [...(e.reads as string[]), GROUP] }
+          ),
+        ...(o.sender === true
+          ? [
+              {
+                from: `${SENDER}.chat`,
+                to: `${TELEGRAM_USER}.chat`,
+                type: 'chat-out' as const,
+                sends: [DM],
+              },
+            ]
+          : []),
+      ],
     }),
     print: (line) => void lines.push(line),
     record: (r) => {

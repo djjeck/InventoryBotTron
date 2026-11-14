@@ -1,9 +1,10 @@
 /**
  * The `inventorybot` parser's events of the owner's private replies, one event type per kind of
  * reply (since 0.6.0): `inventorybot.<kind>`, `<kind>` the grammar's event type
- * (`@inventorybottron/grammar`) in camel case (`inventorybot.itemInfo` for `item_info`), its payload the grammar's event's fields beside the reply's
- * context. Each is declared with its own schema, so that MegaBotTron1999's editor and a script's
- * types know its fields. Pure logic only.
+ * (`@inventorybottron/grammar`) in camel case (`inventorybot.itemInfo` for `item_info`), its
+ * payload the grammar's event's fields beside the reply's context, and, for a few kinds, what the
+ * command answers read (`ANSWER_FIELDS`, since 0.9.0). Each is declared with its own schema, so
+ * that MegaBotTron1999's editor and a script's types know its fields. Pure logic only.
  *
  * - **What is published:** the kinds of `REPLY_KINDS`, read in the private chat with the bot, where
  *   every reply is the owner's: what lists, shows or moves their items, where they are, their
@@ -16,6 +17,7 @@
  *   format).
  */
 import { type Event } from '@inventorybottron/grammar';
+import { isFailedUse } from '@inventorybottron/state';
 import { z } from 'zod';
 
 /** The reply's context, beside the grammar's fields. */
@@ -218,6 +220,58 @@ const KINDS = {
 /** The kinds of reply published, each as `inventorybot.<kind>`. */
 export type ReplyKind = keyof typeof KINDS;
 
+/**
+ * What the parser adds to some kinds' payloads beside the grammar's fields, which the command
+ * answers read (`answers.ts`, since 0.9.0): when a cooldown ends, whether a use failed, whether a
+ * recipe's detail answers an `/esamina`.
+ */
+const ANSWER_FIELDS = {
+  item_cooldown: z.object({
+    retryAt: z
+      .number()
+      .describe(
+        'When the item may be used or given again (ms): the wait stated, plus its smallest unit'
+      ),
+  }),
+  pakkomon_stunned: z.object({
+    retryAt: z.number().describe('When the Pakkomon recovers (ms), as the bot states it'),
+  }),
+  use: z.object({
+    failed: z
+      .boolean()
+      .describe('The use failed for a requirement it lacks (items, their number, a key, …)'),
+  }),
+  recipe_detail: z.object({
+    examined: z
+      .boolean()
+      .describe(
+        'The detail answers an /esamina of the recipe, not a /ricetta refused for what it misses'
+      ),
+  }),
+} satisfies Partial<Record<ReplyKind, z.ZodObject>>;
+
+/** "per fare la ricetta X": a recipe's detail shown to an `/esamina` (docs/bot-protocol.md §6.5). */
+const EXAMINED = /(?:^|\s)per fare la ricetta /u;
+
+/**
+ * The fields the parser adds to a reply's payload for the command answers (`ANSWER_FIELDS`), from
+ * the grammar's event, the message's text and its time (ms).
+ */
+export function answerFields(ev: Event, text: string, t: number): Record<string, unknown> {
+  switch (ev.type) {
+    case 'item_cooldown':
+      return { retryAt: t + (ev.remaining + ev.precision) * 1000 };
+    case 'pakkomon_stunned':
+      return { retryAt: t + ev.remaining * 1000 };
+    case 'use':
+      return { failed: isFailedUse(ev.text) };
+    case 'recipe_detail':
+      return { examined: EXAMINED.test(text.normalize('NFC')) };
+    default:
+      return {};
+  }
+}
+
 /** The kinds of reply published, in their order in the manifest. */
 export const REPLY_KINDS = Object.keys(KINDS) as ReplyKind[];
 
@@ -276,7 +330,10 @@ export const replyKindOf = (type: string): ReplyKind | undefined => KIND_OF.get(
 export const REPLY_SCHEMAS: Record<string, z.ZodObject> = Object.fromEntries(
   REPLY_KINDS.map((k) => {
     const [fields, what] = KINDS[k];
-    return [replyEvent(k), z.object(context).extend(fields.shape).describe(what)];
+    const added: z.ZodRawShape = Object.hasOwn(ANSWER_FIELDS, k)
+      ? ANSWER_FIELDS[k as keyof typeof ANSWER_FIELDS].shape
+      : {};
+    return [replyEvent(k), z.object(context).extend(fields.shape).extend(added).describe(what)];
   })
 );
 
@@ -285,10 +342,16 @@ export function isReplyKind(type: string): type is ReplyKind {
   return Object.hasOwn(KINDS, type);
 }
 
-/** The context's fields, which are not the grammar's. */
-export const CONTEXT_FIELDS: readonly string[] = Object.keys(context);
+/** The fields the parser adds, the context's and the answers', which are not the grammar's. */
+export const CONTEXT_FIELDS: readonly string[] = [
+  ...Object.keys(context),
+  ...new Set(Object.values(ANSWER_FIELDS).flatMap((s) => Object.keys(s.shape))),
+];
 
-/** A grammar's event as its event's payload: the context, then its fields, `type` left out. */
+/**
+ * A grammar's event as its event's payload: the context, then its fields, `type` left out; the
+ * fields the answers read (`answerFields`) are the caller's to add.
+ */
 export function replyPayload(
   ev: Event,
   ctx: { chat: string; query: string | null; self?: string | undefined; playback?: boolean }
