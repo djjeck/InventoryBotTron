@@ -3,6 +3,14 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.9.1 (2026-11-17)
+
+- **Fix: `inventorybot-state.state.count` for an item named like an object's property.** Asked for
+  `constructor`, `toString` or `__proto__`, it answered the object's own inherited value (a
+  function) instead of a number, since it looked the name up without checking that the owner holds
+  it. Items are named by players, so it now counts only the items held, and answers 0 for any other
+  name. Nothing else changes: `state.held` and the state itself were already safe.
+
 ## 0.9.0 (2026-11-14)
 
 - **Command answers.** The parser declares which of its events answer which of the owner's commands

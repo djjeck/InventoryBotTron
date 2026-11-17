@@ -102,7 +102,11 @@ const base = statePlugin<Kept>({
       help: 'How many of an item the owner holds, as the state estimates it',
       input: z.object({ name: z.string() }),
       output: z.number(),
-      run: (s, input: { name: string }) => held(s)[input.name] ?? 0,
+      run: (s, input: { name: string }) => {
+        // An item is named by a player: only an own property counts (not `constructor`'s).
+        const items = held(s);
+        return Object.hasOwn(items, input.name) ? (items[input.name] ?? 0) : 0;
+      },
     },
     held: {
       help: 'Every item the owner holds, with its count',

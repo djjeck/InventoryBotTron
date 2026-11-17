@@ -41,6 +41,15 @@ describe('the inventorybot-state node', () => {
     await run.core.stop();
   });
 
+  it('counts an item named like an object’s own property as none held, not as its value', async () => {
+    const run = await bootState(dir);
+    await run.owner('/inventario');
+    await run.bot(`@${OWNER}, possiedi:\n- un sasso [C] x2`);
+    for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty'])
+      expect(run.read('count', { name })).toBe(0);
+    expect(run.read('count', { name: 'un sasso' })).toBe(2);
+  });
+
   it('applies listings and drops, a whole listing a snapshot and a guess uncertain', async () => {
     const run = await bootState(dir);
     await run.owner('/inventario');
