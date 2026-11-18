@@ -28,7 +28,9 @@ describe('the inventorybot parser', () => {
     const m = parseManifest(inventorybotPlugin.manifest);
     expect(m.id).toBe(INVENTORYBOT_PARSER);
     expect(Object.keys(m.events ?? {})).toEqual([
+      'inventorybot.sent',
       'inventorybot.turn',
+      'inventorybot.reply',
       ...REPLY_KINDS.map(replyEvent),
       'inventorybot.resolved',
     ]);
@@ -36,7 +38,8 @@ describe('the inventorybot parser', () => {
     expect(m.events?.['inventorybot.craft']?.description).toBe(
       'A recipe made: the ingredients spent and the item made'
     );
-    expect(Object.keys(m.interface.state ?? {})).toEqual(['rest', 'lastTurn']);
+    // Only the send a player hands on (MegaBotTron1999's D141): readiness is the state's.
+    expect(m.interface.state).toBeUndefined();
     expect(Object.keys(m.interface.actions ?? {})).toEqual(['sent', 'seed']);
     expect(m.config).toBeUndefined();
   });
@@ -44,7 +47,8 @@ describe('the inventorybot parser', () => {
   it("reads the owner's drops in either chat, and the cooldown in private, with the rests", async () => {
     const p = await runParser();
     p.bot(`@${OWNER}, ${S}una perla [C]!`, { chat: DM });
-    expect(p.read('rest')).toMatchObject({ until: T0 + 15 * MIN, why: 'its rest after a turn' });
+    // Each with the wait it states, which a state's readiness reduces (MegaBotTron1999's D141).
+    expect(p.events[0]?.['retryAt']).toBe(T0 + 15 * MIN);
     p.bot(`@${OWNER}, ${S}una chiave di ebano 🔑 [R] [usabile]!`);
     // Others' drops and the group's cooldown are none of its business.
     p.bot(`@lucia_b, ${S}un sasso [R]!`);
@@ -73,7 +77,7 @@ describe('the inventorybot parser', () => {
       { kind: 'nothing', bot: 'InventoryBot', reason: 'cooldown', retryMs: 20 * MIN },
     ]);
     expect(p.events.map((e) => e['chat'])).toEqual([DM, GROUP, DM]);
-    expect(p.read('rest')).toMatchObject({ until: T0 + 21 * MIN, why: 'it said too soon' });
+    expect(p.events[2]?.['retryAt']).toBe(T0 + 21 * MIN);
     expect(p.drift()).toMatchObject({ read: 3, unread: 0 });
   });
 
@@ -281,7 +285,7 @@ describe('the inventorybot parser', () => {
       const graph = {
         version: 2,
         nodes: [
-          { id: TELEGRAM_USER, plugin: TELEGRAM_USER },
+          { id: TELEGRAM_USER, plugin: TELEGRAM_USER, account: `telegram:${OWNER}` },
           // A node saved while it named its commands: its config is ignored.
           { id: 'inventorybot', plugin: 'inventorybot', config: { commands: ['/avventura'] } },
         ],

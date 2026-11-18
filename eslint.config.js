@@ -42,7 +42,7 @@ const MODULE_FOREIGN_IMPORTS = {
 
 /** Nothing here plays: no module imports MegaBotTron1999's actors. */
 const ACTOR_IMPORTS = {
-  regex: '^@megabottron1999/turns/turn-actor\\.ts$',
+  regex: '^@megabottron1999/turns/(player|attention)\\.ts$',
   message: 'InventoryBotTron automates no play: it imports no actor.',
 };
 
