@@ -10,6 +10,15 @@ export const INVENTORYBOT = 'InventoryBot';
 /** Its turn command (docs/bot-protocol.md §2.1), a fact of the game (MegaBotTron1999's D70). */
 export const TURN_COMMANDS: readonly string[] = ['/avventura'];
 
+/** The parser's id, and the namespace of its events (`inventorybot.turn`). */
+export const INVENTORYBOT_PARSER = 'inventorybot';
+
+/**
+ * The bot's vocabulary (MegaBotTron1999's `BotVocabulary`, its D141): its username and its turn,
+ * with no other command a player plays. The parser's, and the state's readiness keys it the same.
+ */
+export const INVENTORYBOT_VOCABULARY = { bot: INVENTORYBOT, turnCommands: TURN_COMMANDS };
+
 /** The rest after an adventure: one every 15 minutes (docs/bot-protocol.md §2.1). */
 export const TURN_REST_MS = 15 * 60_000;
 

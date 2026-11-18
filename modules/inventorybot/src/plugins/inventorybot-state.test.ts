@@ -1,11 +1,12 @@
 import { parseManifest } from '@megabottron1999/core';
+import { STATE_DOC } from '@megabottron1999/turns/state-plugin.ts';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DM, MIN, OWNER, T0 } from '#test/run.ts';
 import { bootState } from '#test/state-run.ts';
-import { inventorybotStatePlugin, plugins } from './inventorybot-state.ts';
+import { inventorybotStatePlugin, MIGRATIONS, plugins } from './inventorybot-state.ts';
 
 // Invented sentences (CLAUDE.md, "Game content"), with items of scripts/universe.md.
 const S = 'mentre conti le nuvole dal tetto del mulino ti cade in mano ';
@@ -28,12 +29,29 @@ describe('the inventorybot-state node', () => {
     const m = parseManifest(inventorybotStatePlugin.manifest);
     expect(m.id).toBe('inventorybot-state');
     expect(m.kinds).toEqual(['stats']);
-    expect(m.inputs).toMatchObject({ events: { type: 'events', namespace: 'inventorybot' } });
+    expect(m.inputs).toMatchObject({
+      events: { type: 'events', namespace: 'inventorybot' },
+      // The parser a shell player's sends are handed to (MegaBotTron1999's D141).
+      parser: { type: 'interface', members: ['actions.sent'], bind: { node: 'inventorybot' } },
+    });
     expect(Object.keys(m.events ?? {})).toEqual([
       'inventorybot-state.changed',
       'inventorybot-state.gained',
     ]);
-    expect(Object.keys(m.interface.state ?? {})).toEqual(['get', 'freshness', 'count', 'held']);
+    expect(Object.keys(m.interface.state ?? {})).toEqual([
+      'get',
+      'freshness',
+      'count',
+      'held',
+      // The owner's readiness, for a shell player (D141).
+      'ready',
+      'commands',
+      'bot',
+    ]);
+    expect(Object.keys(m.interface.actions ?? {})).toEqual(['sent']);
+    // The turn alone, with no mechanics: its hold is the bot's rest.
+    expect(m.botUsername).toBe('InventoryBot');
+    expect(m.botCommands).toEqual([{ command: '/avventura', turn: true }]);
     expect(m.config?.parse({})).toEqual({ pin: ['inventory.held', 'drops.latest'] });
     const run = await bootState(dir);
     expect(run.core.graphProblems()).toEqual([]);
@@ -84,10 +102,11 @@ describe('the inventorybot-state node', () => {
       updated: { t: T0 + 2 * MIN, event: 'inventorybot.turn' },
     });
     // The owner's latest event moves with each; a known item is not seen anew.
+    // The drops' rest moves the readiness too.
     expect(run.of('inventorybot-state.changed').map((c) => c['refreshed'])).toEqual([
       ['owner', 'inventory', 'items'],
-      ['owner', 'inventory', 'drops'],
-      ['owner', 'inventory', 'drops'],
+      ['owner', 'inventory', 'drops', 'readiness'],
+      ['owner', 'inventory', 'drops', 'readiness'],
     ]);
     // A whole listing is a snapshot, its deltas from zero again; it teaches the parser the guessed
     // item too, which tells it first.
@@ -281,7 +300,7 @@ describe('the inventorybot-state node', () => {
     expect(held(second)).toEqual({ 'un sasso': 2, 'una perla': 1 });
     // The catch-up announced once, its sections summed.
     expect(second.of('inventorybot-state.changed').map((c) => [c['sections'], c['event']])).toEqual(
-      [[['owner', 'inventory', 'items', 'drops'], undefined]]
+      [[['owner', 'inventory', 'items', 'drops', 'readiness'], undefined]]
     );
     // Live again at once.
     await second.bot(`@${OWNER}, ${S}un sasso [C]!`);
@@ -329,5 +348,73 @@ describe('the inventorybot-state node', () => {
     const third = await bootState(dir, { at: T0 + 10 * MIN });
     expect(third.of('inventorybot-state.refused')).toEqual([]);
     await third.core.stop();
+  });
+
+  it("holds /avventura through the bot's rest, as the parser's turns state it", async () => {
+    const run = await bootState(dir);
+    const ready = () =>
+      (run.read('ready') as Record<string, { ready: boolean; until?: number; why?: string }>)[
+        '/avventura'
+      ];
+    expect(run.read('bot')).toBe('InventoryBot');
+    expect(run.read('commands')).toEqual([{ command: '/avventura', turn: true }]);
+    // Nothing known: ready.
+    expect(ready()).toEqual({ ready: true });
+    // The owner's turn, by hand, and its drop: held for the bot's 15 minutes' rest.
+    await run.owner('/avventura');
+    await run.bot(`@${OWNER}, ${S}un sasso [C]!`);
+    expect(ready()).toMatchObject({
+      ready: false,
+      until: T0 + 15 * MIN,
+      why: 'its rest after a turn',
+    });
+    expect(run.read('get', { path: 'readiness.commands./avventura.sent' })).toEqual({
+      t: T0,
+      byHand: true,
+    });
+    run.clock.advance(5 * MIN);
+    expect(ready()).toMatchObject({ ready: false, until: T0 + 15 * MIN });
+    // Too soon: held for the wait it states, from its own time, when it ends later.
+    await run.owner('/avventura');
+    await run.bot(
+      'Troppo presto, devi riposare ancora per 11 minuti prima di poterti avventurare di nuovo.'
+    );
+    expect(ready()).toMatchObject({ ready: false, until: T0 + 16 * MIN, why: 'it said too soon' });
+    // Its rest over: ready again, since its end.
+    run.clock.advance(11 * MIN);
+    expect(ready()).toMatchObject({ ready: true, since: T0 + 16 * MIN });
+    // A player's send, handed on through the state, reaches the parser, which pairs its answer.
+    expect(
+      await run.core.controls.act('inventorybot-state', 'sent', { chat: DM, t: run.clock.now() })
+    ).toEqual({ output: undefined });
+    await run.settle();
+    expect(run.of('inventorybot.sent').at(-1)).toMatchObject({
+      command: '/avventura',
+      byHand: false,
+    });
+    await run.core.stop();
+  });
+
+  it('adds the readiness to a state kept before it, nothing known yet', () => {
+    const docs = new Map<string, unknown>([
+      [STATE_DOC, { state: { owner: { player: null } }, cursor: {} }],
+    ]);
+    const store = {
+      read: <T>(name: string) => docs.get(name) as T | undefined,
+      write: (name: string, value: unknown) => void docs.set(name, value),
+    };
+    const add = MIGRATIONS[1] as (s: typeof store) => void;
+    add(store);
+    expect(docs.get(STATE_DOC)).toEqual({
+      state: { owner: { player: null }, readiness: { commands: {}, holds: {} } },
+      cursor: {},
+    });
+    // Once added, and with no state kept, nothing changes.
+    const kept = docs.get(STATE_DOC);
+    add(store);
+    expect(docs.get(STATE_DOC)).toBe(kept);
+    docs.clear();
+    add(store);
+    expect(docs.size).toBe(0);
   });
 });

@@ -20,10 +20,12 @@
 import { INVENTORY_COMMANDS, INVENTORY_LIST_COMMANDS } from '@inventorybottron/grammar';
 import { isoOf, queryArg, type State, type StateEvent } from '@inventorybottron/state';
 import { type BusEvent } from '@megabottron1999/core';
+import { ReadinessModel } from '@megabottron1999/turns/readiness.ts';
 import { type Mark } from '@megabottron1999/turns/state-plugin.ts';
 import { z } from 'zod';
 import { CONTEXT_FIELDS, REPLY_KINDS, replyEvent, type ReplyKind, replyKindOf } from './replies.ts';
 import { RESOLVED_EVENT, type resolvedSchema } from './resolved.ts';
+import { INVENTORYBOT_PARSER, INVENTORYBOT_VOCABULARY } from './turn.ts';
 
 /** The plugin's id, and the namespace of its events (`inventorybot-state.changed`). */
 export const INVENTORYBOT_STATE = 'inventorybot-state';
@@ -34,6 +36,16 @@ export const CONSUMES: readonly string[] = [
   ...REPLY_KINDS.map(replyEvent),
   RESOLVED_EVENT,
 ];
+
+/**
+ * The owner's readiness at InventoryBot (MegaBotTron1999's D141, since 0.10.0): the parser's
+ * vocabulary, the turn alone, with no mechanics of its own. The turn's hold is the bot's rest, which
+ * the parser's turns state (`retryAt`: 15 minutes after a drop, a "too soon"'s own wait); the state
+ * knows no fact besides that holds a command, so it folds nothing in.
+ */
+export const INVENTORYBOT_READINESS = new ReadinessModel({
+  parser: { id: INVENTORYBOT_PARSER, ...INVENTORYBOT_VOCABULARY },
+});
 
 /** The paths of the state its node's panel draws first, and its card's line. */
 export const PINS = ['inventory.held', 'drops.latest'];

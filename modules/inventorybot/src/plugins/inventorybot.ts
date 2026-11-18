@@ -46,16 +46,19 @@ import { InventoryKnowledge, seedSchema } from '#src/knowledge.ts';
 import { readInventoryBot, readStateReply } from '#src/read.ts';
 import { answerFields, REPLY_SCHEMAS, replyEvent, replyPayload } from '#src/replies.ts';
 import { RESOLVED_EVENT, resolvedPayload, resolvedSchema } from '#src/resolved.ts';
-import { INVENTORYBOT, type InventoryOutcome, TURN_COMMANDS } from '#src/turn.ts';
+import {
+  INVENTORYBOT,
+  INVENTORYBOT_PARSER,
+  INVENTORYBOT_VOCABULARY,
+  type InventoryOutcome,
+} from '#src/turn.ts';
 
-/** The plugin's id, and the namespace of its events (`inventorybot.turn`). */
-export const INVENTORYBOT_PARSER = 'inventorybot';
+export { INVENTORYBOT_PARSER };
 
 const spec = (read: TurnParserSpec['read']): TurnParserSpec => ({
   id: INVENTORYBOT_PARSER,
-  bot: INVENTORYBOT,
+  ...INVENTORYBOT_VOCABULARY,
   description: "@InventoryBot's answers to the owner's turns: the items, and its rest",
-  turnCommands: TURN_COMMANDS,
   read,
 });
 

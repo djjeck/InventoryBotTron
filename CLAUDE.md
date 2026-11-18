@@ -249,9 +249,18 @@ recognises each), and the command answers built on it.
   package's `State`); and the freshness: a whole listing a `snapshot` of `inventory`, a guess
   `uncertain`, any other change a `delta`. Its interface adds `count` and `held`; its config's `pin`
   defaults to `inventory.held` and `drops.latest`. Its store's first migration (0.7.0) takes
-  `drops.pending` out of a state kept before. It announces each change as
-  `inventorybot-state.changed` (the sections changed, `statePlugin`'s), and, since 0.5.0, what
-  happened in its own event, `inventorybot-state.gained` (below).
+  `drops.pending` out of a state kept before; its second (0.10.0) adds the section `readiness`. It
+  announces each change as `inventorybot-state.changed` (the sections changed, `statePlugin`'s),
+  and, since 0.5.0, what happened in its own event, `inventorybot-state.gained` (below).
+- **The owner's readiness** (since 0.10.0, MegaBotTron1999's D141): `inventorybot-state` declares
+  `readiness` in its spec (`INVENTORYBOT_READINESS`, `src/state.ts`: the parser's id and its
+  vocabulary, `INVENTORYBOT_VOCABULARY` of `src/turn.ts`, the turn `/avventura` alone, with no
+  mechanics), so the shell keeps the section `readiness` from the parser's `sent`, `turn` and
+  `reply`, and the state offers the contract a shell `player` binds its `state` input to:
+  `state.ready`, `state.commands`, `state.bot` and `actions.sent`, which it hands to the parser
+  through its second required input, `parser` (bound to the `inventorybot` node's interface). The
+  turn's hold is the bot's rest, as the parser's turns state it (`retryAt`); the state knows no
+  other fact that holds a command, so it folds nothing in. Add mechanics only for what the game has.
 - **State plugins offer rich domain events.** A state tells what an event did in the game's own
   terms (an item gained), not only which sections changed, so that the owner writes a small script
   on the fly ("when I find X, …") on its events instead of comparing states. Each is declared in the

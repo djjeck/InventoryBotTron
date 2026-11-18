@@ -3,6 +3,26 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.10.0 (2026-11-17)
+
+- **The owner's readiness is the state's** (MegaBotTron1999's D141, its #62; breaking). A parser now
+  only reads: the shell's turn parser offers `actions.sent` alone, without the `state.rest` and
+  `state.lastTurn` 0.9.0 listed, and its turn-actor is replaced by the shell's `player`, which binds
+  to a state offering `state.ready`, `state.commands`, `state.bot` and `actions.sent`.
+  `inventorybot-state` now declares `readiness` for InventoryBot's turn, `/avventura`, with no
+  mechanics (the game has none for a player's other commands): the shell keeps the section
+  `readiness` from the parser's events, the turn held for the bot's rest as its turns state it
+  (`retryAt`), and the state offers that contract. Nothing else holds a command: the state knows no
+  such fact.
+- **A new required input,** `parser`, on `inventorybot-state`: bind it to the `inventorybot` node's
+  interface (`inventorybot.interface` → `inventorybot-state.parser`), so that a player's sends reach
+  the parser. A player of InventoryBot binds its `state` input to `inventorybot-state.interface`.
+- **It applies the turn parser's `inventorybot.sent` and `inventorybot.reply` too,** to the
+  readiness only, and `changed` names the section `readiness` when it moves (a turn's rest).
+- **A second migration** adds the section to a state kept before, nothing known: the turn ready.
+- **Needs the MegaBotTron1999 release after 0.1.41** (built against its commit `ff48ef4`): an older
+  shell knows no `readiness` in a state's spec.
+
 ## 0.9.1 (2026-11-17)
 
 - **Fix: `inventorybot-state.state.count` for an item named like an object's property.** Asked for

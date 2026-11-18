@@ -4,10 +4,17 @@
  * `inventorybot` parser's events, with InventoryBotTron's reducer (`@inventorybottron/state`), as
  * `src/state.ts` reads them.
  *
- * - **Its input:** `events`, required, bound to the `inventorybot` parser's events output (the
+ * - **Its inputs:** `events`, required, bound to the `inventorybot` parser's events output (the
  *   namespace `inventorybot`): `inventorybot.turn` (the drops) and each kind of private reply,
  *   `inventorybot.<kind>` (`src/replies.ts`: the listings, cards, recipes, crafts, uses, gifts and
- *   gives, places and Pakkomon), since 0.6.0.
+ *   gives, places and Pakkomon), since 0.6.0; and, since 0.10.0, the turn parser's `sent` and
+ *   `reply`. `parser`, required, bound to the `inventorybot` parser's interface
+ *   (`actions.sent`): the sends a shell player tells it of, handed on (MegaBotTron1999's D141).
+ * - **The owner's readiness** (since 0.10.0, MegaBotTron1999's D141): when `/avventura` may be
+ *   played again, the section `readiness`, reduced by the shell's `ReadinessModel`
+ *   (`INVENTORYBOT_READINESS`) from the parser's events: the turn's rest, as the bot states it. A
+ *   shell player binds its `state` input here (`state.ready`, `state.commands`, `state.bot`,
+ *   `actions.sent`). Its second migration adds the section, empty, to a state kept before.
  * - **Freshness:** a whole listing is a `snapshot` of the inventory; a drop, a use, a craft or any
  *   other change a `delta`; a drop the parser is not sure of `uncertain`.
  * - **Guessed drops:** a guess is counted under its guess, and moved to its item when the parser
@@ -15,7 +22,8 @@
  *   tells nothing of a correction: its events announce new facts, never corrections of past ones.
  *   Since 0.7.0 it keeps no `drops.pending` (its first migration takes it out of a kept state).
  * - **Its interface:** `state.get`, `state.freshness`, and `state.count({ name })` (how many of an
- *   item the owner holds) and `state.held()` (every item held, with its count).
+ *   item the owner holds) and `state.held()` (every item held, with its count); the readiness's
+ *   `state.ready`, `state.commands`, `state.bot` and `actions.sent`.
  * - **Its config:** `pin`, by default `inventory.held` (how many items the owner holds) and
  *   `drops.latest` (the latest drops), the line of its card.
  *
@@ -49,6 +57,7 @@ import { gainedSchema, gains } from '#src/gains.ts';
 import {
   CONSUMES,
   freshness,
+  INVENTORYBOT_READINESS,
   INVENTORYBOT_STATE,
   PINS,
   stateSchema,
@@ -65,7 +74,7 @@ const held = (s: State): Record<string, number> =>
 
 /**
  * Its store's migrations: the first (0.7.0) takes `drops.pending` out of a kept state, now that the
- * parser keeps the guesses.
+ * parser keeps the guesses; the second (0.10.0) adds the readiness's section, nothing known yet.
  */
 export const MIGRATIONS = [
   (store: MigrationStore): void => {
@@ -73,6 +82,14 @@ export const MIGRATIONS = [
     if (kept?.state?.drops === undefined || !('pending' in kept.state.drops)) return;
     delete kept.state.drops['pending'];
     store.write(STATE_DOC, kept);
+  },
+  (store: MigrationStore): void => {
+    const kept = store.read<{ state?: Record<string, unknown> }>(STATE_DOC);
+    if (kept?.state === undefined || kept.state['readiness'] !== undefined) return;
+    store.write(STATE_DOC, {
+      ...kept,
+      state: { ...kept.state, readiness: INVENTORYBOT_READINESS.initial() },
+    });
   },
 ];
 
@@ -82,6 +99,8 @@ const base = statePlugin<Kept>({
   schema: stateSchema,
   initial: initialState() as Kept,
   consumes: CONSUMES,
+  // The owner's readiness, the parser's events reduced by the shell (D141): the turn's rest only.
+  readiness: INVENTORYBOT_READINESS,
   reduce: (state, event) => {
     const e = toStateEvent(state, event);
     if (e === undefined) return state;

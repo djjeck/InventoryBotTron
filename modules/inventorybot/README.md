@@ -103,6 +103,43 @@ flows from the parser to the state: the state moves the drop's count from the gu
 `changed` tells the sections it changed, but it tells no `gained` again and no event of its own for
 it. A script that needs corrections listens to the parser's `inventorybot.resolved`.
 
+Since 0.10.0 it also applies the turn parser's `inventorybot.sent` (a send of `/avventura`, by hand
+or a player's) and `inventorybot.reply` (an answer the grammar does not read) to the readiness
+below, and to nothing else; `changed` then names the section `readiness`.
+
+## The owner's readiness, for a shell player
+
+Since 0.10.0 (MegaBotTron1999's D141, past its 0.1.41), a parser only reads: when a command may be
+played again is a state's. `inventorybot-state` keeps it for InventoryBot's one playable command,
+the turn `/avventura`, in the section `readiness`: the shell's `ReadinessModel` reduces it from the
+parser's events, the turn's hold being the bot's rest as the parser's turns state it (`retryAt`: 15
+minutes after a drop, a "too soon"'s own wait, whichever ends later). It declares no mechanics, the
+game having none for its other commands a player would play, and folds in no fact of its own.
+
+| Interface          | Answers                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `state.ready()`    | `/avventura`'s readiness: `{ ready, since? }` or `{ ready: false, until, why }`, its last send |
+| `state.commands()` | The bot's commands: `[{ command: '/avventura', turn: true }]`                                  |
+| `state.bot()`      | The bot's username, `InventoryBot`                                                             |
+| `actions.sent`     | A send of a player's, handed on to the parser, which pairs its answer                          |
+
+The node has two required inputs: `events`, bound to the `inventorybot` node's events output, and
+`parser`, bound to its interface (the sends a player tells the state of, handed on). A shell
+`player` playing InventoryBot binds its `state` input to this node's interface:
+
+```json
+{
+  "edges": [
+    { "from": "inventorybot.events", "to": "inventorybot-state.events", "type": "events" },
+    { "from": "inventorybot.interface", "to": "inventorybot-state.parser", "type": "interface" },
+    { "from": "inventorybot-state.interface", "to": "<player>.state", "type": "interface" }
+  ]
+}
+```
+
+A state kept before 0.10.0 gets the section, nothing known (the turn ready), from the store's second
+migration.
+
 ## The owner's summary
 
 Since 0.8.0, the `inventorybot-state` node adds a line to the owner's periodic summary

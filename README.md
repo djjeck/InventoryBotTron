@@ -29,19 +29,22 @@ The `inventorybot` node reads the owner's own Telegram account (`telegram-user`)
 private chat with the bot, and the game's group if the owner plays there. It publishes the owner's
 adventures as `inventorybot.turn`, and each private reply as an event of its kind
 (`inventorybot.inventory`, `inventorybot.craft`, `inventorybot.itemInfo`, …), and these events
-answer the owner's commands (since 0.9.0, which needs MegaBotTron1999 0.1.21 or later): a script
-that sends a command through the owner's account learns whether the bot did it or refused it, and
-why. Every event, its fields, the command answers and the bot's replies that refuse a command are in
-the module's [README](modules/inventorybot/README.md).
+answer the owner's commands (since 0.9.0, which needs MegaBotTron1999 0.1.21 or later; 0.10.0 needs
+the release after 0.1.41, with its D141): a script that sends a command through the owner's account
+learns whether the bot did it or refused it, and why. Every event, its fields, the command answers
+and the bot's replies that refuse a command are in the module's
+[README](modules/inventorybot/README.md).
 
 ## The player state
 
 The module's second plugin, `inventorybot-state`, keeps the owner's state at the game from what the
 `inventorybot` node reads: the inventory (each item's count, whether it is exact, its rarity and
 tags), the items seen and used, the recipes made, the places, the Pakkomon, and the latest drops. In
-the graph editor, add an `inventorybot-state` node and bind its one input, `events` (required), to
-the `inventorybot` node's events output: an `events` edge from `inventorybot.events` to
-`inventorybot-state.events`. In the graph file:
+the graph editor, add an `inventorybot-state` node and bind its two inputs, both required: `events`
+to the `inventorybot` node's events output (an `events` edge from `inventorybot.events` to
+`inventorybot-state.events`), and, since 0.10.0, `parser` to the `inventorybot` node's interface (an
+`interface` edge from `inventorybot.interface` to `inventorybot-state.parser`: the sends a shell
+player tells the state of, handed on to the parser). In the graph file:
 
 ```json
 {
@@ -52,7 +55,10 @@ the `inventorybot` node's events output: an `events` edge from `inventorybot.eve
       "config": { "pin": ["inventory.held", "drops.latest"] }
     }
   ],
-  "edges": [{ "from": "inventorybot.events", "to": "inventorybot-state.events", "type": "events" }]
+  "edges": [
+    { "from": "inventorybot.events", "to": "inventorybot-state.events", "type": "events" },
+    { "from": "inventorybot.interface", "to": "inventorybot-state.parser", "type": "interface" }
+  ]
 }
 ```
 
@@ -67,6 +73,16 @@ the parser learns the item (from any message it reads, any player's) and tells i
 `inventorybot.resolved`, when the state moves the count to the item. Other nodes read it through its
 interface: `state.get({ path })`, `state.freshness({ section })`, `state.count({ name })` and
 `state.held()`.
+
+**Playing the adventure: the shell's `player`.** Since 0.10.0 (MegaBotTron1999's D141, after its
+0.1.41), a parser only reads, and the owner's readiness is a state's: `inventorybot-state` keeps
+when `/avventura` may go again (the section `readiness`), the bot's rest as the parser's turns state
+it (15 minutes after a drop, a "too soon"'s own wait), and offers the contract a shell `player`
+binds to: `state.ready()`, `state.commands()`, `state.bot()` and `actions.sent`. A `player` playing
+InventoryBot binds its `state` input to the `inventorybot-state` node's interface, not the parser's:
+an `interface` edge from `inventorybot-state.interface` to the player node's `state` input
+(`<player>.state`). Nothing in this repository plays: the player is the shell's, in the owner's
+graph.
 
 It also tells what happened, so that a small script reacts to the game without comparing states:
 `inventorybot-state.gained`, `{ item, sure, qty, exact }`, one per item the owner gains (an
