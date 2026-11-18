@@ -66,7 +66,7 @@ describe("the parser's command answers", () => {
     // A cooldown's time is the item's, not the command's: told, but holding no command.
     const cool = read('item_cooldown', { retryAt: T0 + MIN });
     expect(cool?.answer).toMatchObject({ status: 'refused', reason: 'cooldown' });
-    expect(cool?.answer.retryAt).toBeUndefined();
+    expect(cool?.answer).not.toHaveProperty('retryAt');
     // A fixed reply that answers no command of the owner's, or a gift, is no answer.
     expect(read('miss', { reply: 'lottery_open' })).toBeUndefined();
     expect(read('gift', {})).toBeUndefined();
@@ -147,7 +147,7 @@ describe("the parser's command answers", () => {
     expect(cool).toMatchObject({ status: 'refused', reason: 'cooldown' });
     // The wait stated, plus its smallest unit (a minute), since the bot truncates it.
     expect(wait(cool)).toBe(4 * 60 + 7);
-    expect(cool?.retryAt).toBeUndefined();
+    expect(cool).not.toHaveProperty('retryAt');
     expect(p.out.held(DM, '/usa')).toBeUndefined();
     const stunned = await p.ask(
       '/usa sasso',
