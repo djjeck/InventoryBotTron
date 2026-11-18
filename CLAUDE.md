@@ -20,10 +20,10 @@ MegaBotTron1999 instance installs them as modules. See [README.md](README.md) fo
 - `modules/inventorybot/`: the MegaBotTron1999 module `inventorybot`, with the `inventorybot` parser
   plugin (below, "The inventorybot module").
 - `vendor/MegaBotTron1999`: MegaBotTron1999, a git submodule pinned to a tag, or to a commit past it
-  when the modules need a change not tagged yet (now `ff48ef4`, past `v0.1.41`: its D141, each
-  command's readiness kept by a state rather than the turn parser), whose `packages/*` are
-  workspaces, so that the modules are written, type-checked and tested against the shell they run in
-  (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the shell is made in its
+  when the modules need a change not tagged yet (now `42efad5`, past `v0.1.43`: its D142, the outbox
+  keeping no game's cooldown, the state alone deciding a command's readiness), whose `packages/*`
+  are workspaces, so that the modules are written, type-checked and tested against the shell they
+  run in (its `docs/bot-os-api.md` §7.5). Never edit it here: a change to the shell is made in its
   repository, and the pin is moved here (with `npm install` for the lockfile) in a commit of its
   own.
 
