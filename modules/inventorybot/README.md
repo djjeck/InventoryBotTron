@@ -155,32 +155,31 @@ forgets them.
 Since 0.9.0 (MegaBotTron1999 0.1.21 or later: its command answers, its issue #59 and D98), the
 parser's events answer the owner's commands: a node that sends one to the bot's private chat through
 the owner's account (a script's `const a = await enqueue(…)`) learns what the bot said to it,
-`{ status: 'ok' | 'refused' | 'unanswered', reason?, retryAt?, event? }`, `event` the parser's event
-that answered (`a.event.reply`, `a.event.retryAt`, …). The core pairs an event with the oldest send
-of a command it answers still waiting in that chat (two minutes at most, then `unanswered`); an
-event read from a message played back answers nothing. The first line that matches an event is its
-answer:
+`{ status: 'ok' | 'refused' | 'unanswered', reason?, event? }`, `event` the parser's event that
+answered (`a.event.reply`, `a.event.retryAt`, …). The core pairs an event with the oldest send of a
+command it answers still waiting in that chat (two minutes at most, then `unanswered`); an event
+read from a message played back answers nothing. The first line that matches an event is its answer:
 
-| Command                                                               | Event (when)                                                                            | Answer                             |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
-| `/avventura`                                                          | `inventorybot.turn` (`nothing`, `cooldown`)                                             | refused, `cooldown`, `retryAt`     |
-| `/avventura`                                                          | `inventorybot.turn` (a gain)                                                            | ok, `rest`, `retryAt`              |
-| `/inventario`, `/inventory`, `/i`, `/collezioni`, `/inv2`, `/esporta` | `inventorybot.inventory`                                                                | ok                                 |
-| `/titolo`                                                             | `inventorybot.title`                                                                    | ok                                 |
-| `/esamina`                                                            | `inventorybot.itemInfo`                                                                 | ok                                 |
-| `/esamina`                                                            | `inventorybot.recipeDetail` (`examined`)                                                | ok                                 |
-| `/ricetta`                                                            | `inventorybot.recipeDetail` (otherwise: ingredients missing)                            | refused, `missing`                 |
-| `/ricetta`                                                            | `inventorybot.recipeList`, `inventorybot.craft`                                         | ok                                 |
-| `/mostra`                                                             | `inventorybot.show`                                                                     | ok                                 |
-| `/dai`                                                                | `inventorybot.give`                                                                     | ok                                 |
-| `/usa`                                                                | `inventorybot.use` (`failed`)                                                           | refused, `missing`                 |
-| `/usa`                                                                | `inventorybot.use` (otherwise)                                                          | ok                                 |
-| `/viaggio`                                                            | `inventorybot.travel`, `inventorybot.location`                                          | ok                                 |
-| `/viaggio`                                                            | `inventorybot.travelBlocked`                                                            | refused, `missing`                 |
-| `/usa`, `/dai`                                                        | `inventorybot.itemCooldown`                                                             | refused, `cooldown` (no `retryAt`) |
-| `/usa`                                                                | `inventorybot.pakkomonStunned`                                                          | refused, `cooldown` (no `retryAt`) |
-| `/usa`                                                                | `inventorybot.pakkomonRecord`, `.pakkomonReady`, `.pakkomonChallenge`, `.pakkomonFight` | ok                                 |
-| as the table of refusals below says                                   | `inventorybot.miss`, by its `reply`                                                     | refused, with its reason, or ok    |
+| Command                                                               | Event (when)                                                                            | Answer                          |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
+| `/avventura`                                                          | `inventorybot.turn` (`nothing`, `cooldown`)                                             | refused, `cooldown`             |
+| `/avventura`                                                          | `inventorybot.turn` (a gain)                                                            | ok, `rest`                      |
+| `/inventario`, `/inventory`, `/i`, `/collezioni`, `/inv2`, `/esporta` | `inventorybot.inventory`                                                                | ok                              |
+| `/titolo`                                                             | `inventorybot.title`                                                                    | ok                              |
+| `/esamina`                                                            | `inventorybot.itemInfo`                                                                 | ok                              |
+| `/esamina`                                                            | `inventorybot.recipeDetail` (`examined`)                                                | ok                              |
+| `/ricetta`                                                            | `inventorybot.recipeDetail` (otherwise: ingredients missing)                            | refused, `missing`              |
+| `/ricetta`                                                            | `inventorybot.recipeList`, `inventorybot.craft`                                         | ok                              |
+| `/mostra`                                                             | `inventorybot.show`                                                                     | ok                              |
+| `/dai`                                                                | `inventorybot.give`                                                                     | ok                              |
+| `/usa`                                                                | `inventorybot.use` (`failed`)                                                           | refused, `missing`              |
+| `/usa`                                                                | `inventorybot.use` (otherwise)                                                          | ok                              |
+| `/viaggio`                                                            | `inventorybot.travel`, `inventorybot.location`                                          | ok                              |
+| `/viaggio`                                                            | `inventorybot.travelBlocked`                                                            | refused, `missing`              |
+| `/usa`, `/dai`                                                        | `inventorybot.itemCooldown`                                                             | refused, `cooldown`             |
+| `/usa`                                                                | `inventorybot.pakkomonStunned`                                                          | refused, `cooldown`             |
+| `/usa`                                                                | `inventorybot.pakkomonRecord`, `.pakkomonReady`, `.pakkomonChallenge`, `.pakkomonFight` | ok                              |
+| as the table of refusals below says                                   | `inventorybot.miss`, by its `reply`                                                     | refused, with its reason, or ok |
 
 The reasons are MegaBotTron1999's where one fits, else the game's own: `cooldown`; `missing` (the
 owner lacks what the command needs: the item, enough of it, the ingredients, the key, the item a
@@ -198,11 +197,11 @@ replies that are the command's answer are `ok`: `faq` (`/faq`, `/start`, `/help`
 (`/stats`), `hidden_recipes`, `hide_recipe`, `unhide_recipe` (`/nascondi`), `favourite`
 (`/preferito`), `quest_none` (`/quest`), `pakkomon_stop` (`/usa`).
 
-- **An item's cooldown, a stunned Pakkomon:** refused with `cooldown`, the time in the event
-  (`a.event.retryAt`), but not as the answer's `retryAt`: that would hold every `/usa` (or `/dai`)
-  back in the chat until then, hours for some items, while the wait is the item's or the Pakkomon's.
-  A node refused again and again for them is backed off by MegaBotTron1999's retry-loop guard (three
-  in a row) instead.
+- **No answer holds a command back** (since 0.10.1, MegaBotTron1999's D142): the shell's outbox
+  keeps no game's cooldown; when the turn may go again is `inventorybot-state`'s readiness, which a
+  shell `player` binds to. The wait the bot states is in the event (`a.event.retryAt`: a turn's
+  rest, an item's cooldown, a stunned Pakkomon's), for a node that reads it. A node refused again
+  and again for one reason is backed off by MegaBotTron1999's retry-loop guard (three in a row).
 - **What answers nothing:** a gift (another player's), the side notice of an item a place on the way
   back requires (`travelRequirement`), the lottery's announcements, a reply the grammar does not
   recognise (the command is `unanswered`), and the `/esporta` caption whose file did not come.

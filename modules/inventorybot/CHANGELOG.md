@@ -3,6 +3,16 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.10.1 (2026-11-18)
+
+- **No answer holds a command back** (MegaBotTron1999's D142, its #63). The shell's outbox keeps no
+  game's cooldown any more: the turn parser's answers to `/avventura` carry no `retryAt`, and a "too
+  soon" holds nothing back there; when the turn may go again is `inventorybot-state`'s readiness
+  alone, which a shell `player` binds to. A script reads the wait the bot states in the answer's
+  event (`a.event.retryAt`), as it did for an item's cooldown. Nothing of this module's changes but
+  its docs: no event, field, config or interface. Built against MegaBotTron1999's commit `42efad5`
+  (past 0.1.43); it runs on an older shell too.
+
 ## 0.10.0 (2026-11-17)
 
 - **The owner's readiness is the state's** (MegaBotTron1999's D141, its #62; breaking). A parser now

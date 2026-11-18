@@ -4,7 +4,8 @@
  * status (`ok` or `refused`) and a reason, so that a node that sends a command (a script's
  * `await enqueue(…)`) learns what the bot said to it. Declared in its manifest's `answers`, after
  * the turn parser's own (its `inventorybot.turn` answers `/avventura`: `refused`/`cooldown` for a
- * "too soon", `ok`/`rest` for a drop, each with its `retryAt`).
+ * "too soon", `ok`/`rest` for a drop). No answer holds a command back (MegaBotTron1999's D142):
+ * the shell's outbox keeps no game's cooldown, and the turn's readiness is `inventorybot-state`'s.
  *
  * - **The core pairs them,** not the parser: an event it publishes while it reads a live message of
  *   the private chat, which a declaration below matches, answers the oldest send of one of the
@@ -18,10 +19,8 @@
  *   (the account cannot play now), `closed` (no lottery open), `error` (the bot failed). The bot's
  *   reply itself is the answer's `event`, its `reply` the grammar's name of a fixed reply (the
  *   module's README, "Refusals").
- * - **An item's cooldown and a stunned Pakkomon** are refused with `cooldown` and their `retryAt` in
- *   the event (`retryAt`, the payload's), but declare no `retryAtFrom`: the wait is the item's or
- *   the Pakkomon's, not the command's, and the core would hold every `/usa` (or `/dai`) back until
- *   then, hours for some items.
+ * - **An item's cooldown and a stunned Pakkomon** are refused with `cooldown`, their wait in the
+ *   event (`retryAt`, the payload's): the item's or the Pakkomon's, not the command's.
  *
  * Pure data only.
  */
@@ -166,7 +165,7 @@ export const ANSWERS: readonly AnswerDeclarationInput[] = [
     status: 'refused',
     reason: 'missing',
   },
-  // Cooldowns: the item's or the Pakkomon's, not the command's (no `retryAtFrom`, above).
+  // Cooldowns: the item's or the Pakkomon's, not the command's (above).
   {
     event: replyEvent('item_cooldown'),
     commands: ['/usa', '/dai'],
