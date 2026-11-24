@@ -370,10 +370,9 @@ files git tracks or would track counted).
   for each package's and each module's `src/` on its own (`vitest.config.ts` sets a threshold for
   each).
 - **Dependencies:** the root has dev dependencies only, as few as possible, each justified in the
-  commit that adds it, pinned to exact versions at least two weeks old, with `package-lock.json`
-  committed; the same for the GitHub Actions the workflow uses. A package or a module has none: a
-  module's `@megabottron1999/*` and `zod` are the workspaces' in development and the host's in an
-  instance.
+  commit that adds it, pinned to exact versions, with `package-lock.json` committed; the same for
+  the GitHub Actions the workflow uses. A package or a module has none: a module's
+  `@megabottron1999/*` and `zod` are the workspaces' in development and the host's in an instance.
 
 ## Conventions
 
