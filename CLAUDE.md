@@ -347,6 +347,8 @@ files git tracks or would track counted).
   removed or renamed, a meaning or a type changed, the `provides` name changed). Below 1.0.0 a
   breaking change raises the minor version, since `^0.x` ranges do not cross it. Each module records
   its versions and why in its `CHANGELOG.md`.
+- **A plugin's manifest carries no `version`** (MegaBotTron1999's D166, since its 0.1.68): the
+  module's, in its `module.json`, is the only one that counts.
 - `npm run check:locks`, run by `validate`, `ci` and GitHub CI, fails when a module's hash changed
   and its version did not, when its `module.json` and `package.json` versions differ, or when its
   lock was not stamped after a bump. After bumping, `npm run stamp` (or `npm run stamp -- <dir>`)

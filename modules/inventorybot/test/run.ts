@@ -25,7 +25,6 @@ export const SENDER = 'sender';
 const senderPlugin = definePlugin({
   manifest: {
     id: SENDER,
-    version: '0.1.0',
     kinds: ['actor'],
     description: 'sends the owner’s commands',
     outputs: { chat: { type: 'chat-out', network: 'telegram' } },
