@@ -104,7 +104,8 @@ export const inventorybotPlugin: Plugin = {
           last.set(m.chat, { text: m.text.trim(), t: m.time });
         return;
       }
-      if (m.sender.toLowerCase() !== INVENTORYBOT.toLowerCase()) return;
+      // The bot by its username, which never changes (MegaBotTron1999's D167).
+      if (m.senderUsername?.toLowerCase() !== INVENTORYBOT.toLowerCase()) return;
       const read = reading;
       reading = undefined;
       // What the message taught, whoever's and wherever, resolves the guesses before it: told
@@ -141,7 +142,13 @@ export const inventorybotPlugin: Plugin = {
       ctx.bus.publish(
         replyEvent(reply.type),
         {
-          ...replyPayload(reply, { chat: m.chat, query, self: chat.self(), playback: m.playback }),
+          ...replyPayload(reply, {
+            chat: m.chat,
+            query,
+            self: chat.self(),
+            selfId: chat.selfId(),
+            playback: m.playback,
+          }),
           ...answerFields(reply, m.text, m.time),
         },
         m.time

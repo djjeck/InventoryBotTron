@@ -3,6 +3,14 @@
 The module's version follows what it offers an instance (its plugin, the plugin's events, config and
 interface), not any repository's releases (InventoryBotTron's CLAUDE.md, "Versions").
 
+## 0.11.0 (2026-11-26)
+
+- **The owner's id on every reply event** (MegaBotTron1999's D167, its #80; this repository's #2).
+  Each `inventorybot.<kind>` reply event carries `selfId`, the owner's Telegram id once the account
+  knows it, beside `self`, their username: the key to the owner by, which a rename of their account
+  keeps. The parser still knows InventoryBot by its username, which never changes. Needs
+  MegaBotTron1999 0.1.69 or later (`Inbound.senderUsername`, `selfId()`); built against 0.1.70.
+
 ## 0.10.1 (2026-11-18)
 
 - **No answer holds a command back** (MegaBotTron1999's D142, its #63). The shell's outbox keeps no

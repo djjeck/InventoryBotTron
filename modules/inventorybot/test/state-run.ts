@@ -54,7 +54,7 @@ export async function bootState(dir: string, o: { at?: number; config?: object }
   const bot = async (text: string, m: Partial<Heard> = {}): Promise<void> => {
     account.hear({
       chat: DM,
-      sender: 'InventoryBot',
+      senderUsername: 'InventoryBot',
       time: clock.now(),
       id: String(n++),
       text,
@@ -64,7 +64,14 @@ export async function bootState(dir: string, o: { at?: number; config?: object }
   };
   /** A command of the owner's, in private. */
   const owner = async (text: string): Promise<void> => {
-    account.hear({ chat: DM, sender: OWNER, own: true, time: clock.now(), id: String(n++), text });
+    account.hear({
+      chat: DM,
+      senderUsername: OWNER,
+      own: true,
+      time: clock.now(),
+      id: String(n++),
+      text,
+    });
     await settle();
   };
   const read = (name: string, input?: Record<string, unknown>): unknown => {

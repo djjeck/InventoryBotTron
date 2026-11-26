@@ -49,6 +49,8 @@ carries the reply's context, then the grammar's fields, flat:
 - `chat`: the private chat;
 - `query`: the owner's last command there, which the reply answers, or null when none is recent;
 - `self`: the owner's username, once the account knows it;
+- `selfId`: the owner's Telegram id, once the account knows it (since 0.11.0, MegaBotTron1999's
+  D167): the key to the owner by, which a rename of their account keeps;
 - `playback: true`: read from a message played back (missed while the instance was down), history
   and not news.
 

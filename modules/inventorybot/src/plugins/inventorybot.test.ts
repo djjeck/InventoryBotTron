@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { type z } from 'zod';
 import { KNOWLEDGE_DOC } from '#src/knowledge.ts';
 import { REPLY_KINDS, replyEvent } from '#src/replies.ts';
-import { DM, GROUP, MIN, OWNER, runParser, T0 } from '#test/run.ts';
+import { DM, GROUP, MIN, OWNER, OWNER_ID, runParser, T0 } from '#test/run.ts';
 import { INVENTORYBOT_PARSER, inventorybotPlugin, plugins } from './inventorybot.ts';
 
 // Invented sentences (CLAUDE.md, "Game content"), with items of scripts/universe.md.
@@ -83,7 +83,7 @@ describe('the inventorybot parser', () => {
 
   it('claims the first message after a turn in private, and reports it to drift if unread', async () => {
     const p = await runParser();
-    p.account.hear({ chat: DM, sender: OWNER, own: true, text: '/avventura', time: T0 });
+    p.account.hear({ chat: DM, senderUsername: OWNER, own: true, text: '/avventura', time: T0 });
     p.bot('Qualcosa di nuovo', { chat: DM });
     p.bot('Ancora altro', { chat: DM });
     expect(p.outcomes()).toEqual([
@@ -138,7 +138,7 @@ describe('the inventorybot parser', () => {
     p.bot(`@${OWNER}, possiedi:\n- un sasso [C] x1`);
     p.account.hear({
       chat: DM,
-      sender: 'lucia_b',
+      senderUsername: 'lucia_b',
       time: p.kit.clock.now(),
       text: `@${OWNER}, possiedi:`,
     });
@@ -161,6 +161,7 @@ describe('the inventorybot parser', () => {
       chat: DM,
       query: '/inventario C',
       self: OWNER,
+      selfId: OWNER_ID,
       filtered: true,
       truncated: false,
       items: [{ name: 'una ghianda', rarity: 'C', usable: false, qty: 3 }],
@@ -316,7 +317,7 @@ describe('the inventorybot parser', () => {
       account.open();
       account.hear({
         chat: DM,
-        sender: 'InventoryBot',
+        senderUsername: 'InventoryBot',
         time: T0,
         text: `@${OWNER}, ${S}un sasso [C]!`,
       });

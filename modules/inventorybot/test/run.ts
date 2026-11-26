@@ -17,6 +17,8 @@ import { inventorybotPlugin } from '#src/plugins/inventorybot.ts';
 export const T0 = Date.parse('2026-11-06T12:00:00Z');
 export const MIN = 60_000;
 export const OWNER = 'mario_r';
+/** The owner's Telegram id, as the account knows it (MegaBotTron1999's D167). */
+export const OWNER_ID = '5000042';
 export const DM = '@InventoryBot';
 export const GROUP = '-1001000000001';
 
@@ -39,7 +41,7 @@ const senderPlugin = definePlugin({
 export async function runParser(documents?: Record<string, unknown>, o: { sender?: boolean } = {}) {
   const plugin = inventorybotPlugin;
   const id = plugin.manifest.id;
-  const account = new FakeConnector({ account: `telegram:${OWNER}` });
+  const account = new FakeConnector({ account: `telegram:${OWNER}`, selfId: OWNER_ID });
   const events: BusEvent[] = [];
   const replies: BusEvent[] = [];
   const lines: string[] = [];
@@ -84,7 +86,7 @@ export async function runParser(documents?: Record<string, unknown>, o: { sender
   const bot = (text: string, m: Partial<Heard> = {}): void =>
     account.hear({
       chat: GROUP,
-      sender: 'InventoryBot',
+      senderUsername: 'InventoryBot',
       time: kit.clock.now(),
       id: String(n++),
       text,
@@ -99,6 +101,6 @@ export async function runParser(documents?: Record<string, unknown>, o: { sender
   const drift = () => kit.core.drift().find((d) => d.parser === id);
   /** A command of the owner's, in private unless it says otherwise. */
   const owner = (text: string, m: Partial<Heard> = {}): void =>
-    account.hear({ chat: DM, sender: OWNER, own: true, time: kit.clock.now(), text, ...m });
+    account.hear({ chat: DM, senderUsername: OWNER, own: true, time: kit.clock.now(), text, ...m });
   return { kit, account, bot, owner, read, act, events, replies, lines, outcomes, drift };
 }

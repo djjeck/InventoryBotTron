@@ -33,6 +33,12 @@ const context = {
     .string()
     .optional()
     .describe("The owner's username, without @, once the account knows it"),
+  selfId: z
+    .string()
+    .optional()
+    .describe(
+      "The owner's Telegram id, once the account knows it: the key to the owner by, which a rename keeps"
+    ),
   playback: z
     .literal(true)
     .optional()
@@ -354,13 +360,20 @@ export const CONTEXT_FIELDS: readonly string[] = [
  */
 export function replyPayload(
   ev: Event,
-  ctx: { chat: string; query: string | null; self?: string | undefined; playback?: boolean }
+  ctx: {
+    chat: string;
+    query: string | null;
+    self?: string | undefined;
+    selfId?: string | undefined;
+    playback?: boolean;
+  }
 ): Record<string, unknown> {
   const { type: _, ...fields } = ev;
   return {
     chat: ctx.chat,
     query: ctx.query,
     ...(ctx.self === undefined ? {} : { self: ctx.self }),
+    ...(ctx.selfId === undefined ? {} : { selfId: ctx.selfId }),
     ...(ctx.playback === true ? { playback: true } : {}),
     ...fields,
   };

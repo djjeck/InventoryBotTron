@@ -24,6 +24,7 @@ const msg = (text: string, more: Partial<BotMessage> = {}): BotMessage => ({
   answers: false,
   replies: false,
   self: 'mario_r',
+  selfId: undefined,
   ...more,
 });
 
